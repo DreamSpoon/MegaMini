@@ -29,13 +29,11 @@ bl_info = {
 import bpy
 from bpy.props import PointerProperty
 
-from .armtest import (MEGAMINI_CreateMegaMiniRig, MEGAMINI_CreateRigProxyPair)
+from .panels import (MEGAMINI_CreateMegaMiniRig, MEGAMINI_CreateRigProxyPair)
 
 if bpy.app.version < (2,80,0):
-#    from .imp_v27 import *
     Region = "TOOLS"
 else:
-#    from .imp_v28 import *
     Region = "UI"
 
 class MEGAMINI_PT_Observer(bpy.types.Panel):
@@ -47,7 +45,6 @@ class MEGAMINI_PT_Observer(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         scn = context.scene
-
         box = layout.box()
         box.label(text="Create Observer")
         box.operator("mega_mini.create_mega_mini_rig")
@@ -61,8 +58,6 @@ class MEGAMINI_PT_Proxy(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-        scn = context.scene
-
         box = layout.box()
         box.label(text="Create Proxy Pair")
         box.operator("mega_mini.create_proxy_pair")
