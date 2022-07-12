@@ -9,6 +9,10 @@ https://en.wikipedia.org/wiki/Forced_perspective
 
 Following the "solar system in a box" analogy:
 - two systems are used, mega and mini
-  1) "Mega" system is the "pocket" version of the "Mini" system
-  2) "Mini" system is full size, i.e. scale = 1
-- the "Mega" system is a scaled down version of the "Mini" system
+  1) "Mini" system is the "pocket" version of the "Mini" system
+  2) "Meag" system is full size, i.e. scale = 1
+- the "Mini" system is a scaled down version of the "Mega" system
+- user can choose the scale, but the scale should not be changed after creating the systems
+  - scale is currently stored in the "Observer", and the "Mega-Mini Proxy", as a custom property
+  - changing scale would require manually changing custom properties in these objects
+    - TODO code a solution

@@ -30,6 +30,7 @@ import bpy
 from bpy.props import PointerProperty
 
 from .panels import (OBJ_PROP_SCALE, MEGAMINI_CreateObserverPair, MEGAMINI_CreateProxyPair, MEGAMINI_AttachProxyPair)
+from .armtest import (MEGAMINI_CreateMegaMiniRig)
 
 if bpy.app.version < (2,80,0):
 #    from .imp_v27 import *
@@ -50,7 +51,8 @@ class MEGAMINI_PT_Observer(bpy.types.Panel):
 
         box = layout.box()
         box.label(text="Create Observer")
-        box.operator("mega_mini.create_observer_pair")
+        #box.operator("mega_mini.create_observer_pair")
+        box.operator("mega_mini.create_mega_mini_rig")
         box.prop(scn, "MegaMini_NewObserverScale")
 
 class MEGAMINI_PT_Proxy(bpy.types.Panel):
@@ -76,7 +78,8 @@ class MEGAMINI_PT_Proxy(bpy.types.Panel):
 classes = [
     MEGAMINI_PT_Observer,
     MEGAMINI_PT_Proxy,
-    MEGAMINI_CreateObserverPair,
+    #MEGAMINI_CreateObserverPair,
+    MEGAMINI_CreateMegaMiniRig,
     MEGAMINI_CreateProxyPair,
     MEGAMINI_AttachProxyPair,
 ]
