@@ -96,12 +96,14 @@ def add_mega_drivers_scl(obs_empty, focus_empty, mega_empty):
     v_focus_x.targets[0].id        = focus_empty
     v_focus_x.targets[0].transform_type = 'LOC_X'
     v_focus_x.targets[0].data_path = "location.x"
+
     v_focus_y = drv_scale_x.variables.new()
     v_focus_y.type = 'TRANSFORMS'
     v_focus_y.name                 = "focus_y"
     v_focus_y.targets[0].id        = focus_empty
     v_focus_y.targets[0].transform_type = 'LOC_Y'
     v_focus_y.targets[0].data_path = "location.y"
+
     v_focus_z = drv_scale_x.variables.new()
     v_focus_z.type = 'TRANSFORMS'
     v_focus_z.name                 = "focus_z"

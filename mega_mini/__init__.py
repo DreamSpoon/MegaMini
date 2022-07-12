@@ -29,8 +29,7 @@ bl_info = {
 import bpy
 from bpy.props import PointerProperty
 
-from .panels import (OBJ_PROP_SCALE, MEGAMINI_CreateObserverPair, MEGAMINI_CreateProxyPair, MEGAMINI_AttachProxyPair)
-from .armtest import (MEGAMINI_CreateMegaMiniRig)
+from .armtest import (MEGAMINI_CreateMegaMiniRig, MEGAMINI_CreateRigProxyPair)
 
 if bpy.app.version < (2,80,0):
 #    from .imp_v27 import *
@@ -51,7 +50,6 @@ class MEGAMINI_PT_Observer(bpy.types.Panel):
 
         box = layout.box()
         box.label(text="Create Observer")
-        #box.operator("mega_mini.create_observer_pair")
         box.operator("mega_mini.create_mega_mini_rig")
         box.prop(scn, "MegaMini_NewObserverScale")
 
@@ -66,22 +64,14 @@ class MEGAMINI_PT_Proxy(bpy.types.Panel):
         scn = context.scene
 
         box = layout.box()
-        box.prop(scn, "MegaMini_SelMegaObserver")
-        box.prop(scn, "MegaMini_SelMiniObserver")
-        box = layout.box()
         box.label(text="Create Proxy Pair")
         box.operator("mega_mini.create_proxy_pair")
-        box = layout.box()
-        box.label(text="Attach Proxy Pair")
-        box.operator("mega_mini.attach_proxy_pair")
 
 classes = [
     MEGAMINI_PT_Observer,
     MEGAMINI_PT_Proxy,
-    #MEGAMINI_CreateObserverPair,
     MEGAMINI_CreateMegaMiniRig,
-    MEGAMINI_CreateProxyPair,
-    MEGAMINI_AttachProxyPair,
+    MEGAMINI_CreateRigProxyPair,
 ]
 
 def register():
@@ -93,21 +83,11 @@ def unregister():
     for cls in classes:
         bpy.utils.unregister_class(cls)
 
-def filter_callback(self, ob):
-#    return ob.get(OBJ_PROP_SCALE) != None
-    return True
-
 def register_props():
     bts = bpy.types.Scene
     bp = bpy.props
     bts.MegaMini_NewObserverScale = bp.FloatProperty(name="Observer Scale",
-        description="Scale to assign to new Mega Observer", default=1000.0, min=0.0)
-    bts.MegaMini_SelMegaObserver = PointerProperty(name="Mega Observer",
-        description="Mega Observer object to use when creating/attaching Proxy Pairs", type=bpy.types.Object,
-        poll=filter_callback)
-    bts.MegaMini_SelMiniObserver = PointerProperty(name="Mini Observer",
-        description="Mini Observer object to use when creating/attaching Proxy Pairs", type=bpy.types.Object,
-        poll=filter_callback)
+        description="Scaling factor to assign to MegaMini rig", default=1000.0, min=0.0)
 
 if __name__ == "__main__":
     register()
