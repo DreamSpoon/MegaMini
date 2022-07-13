@@ -102,9 +102,14 @@ class MEGAMINI_CreateMegaMiniRig(bpy.types.Operator):
         create_mega_mini_armature(context, mega_mini_scale)
         return {'FINISHED'}
 
-def create_proxy_empty_pair(context, armature):
+def create_proxy_empty_pair(context, armature, use_obs_loc):
     # save old view3d mode and enter Edit mode, to add bones to armature
     old_3dview_mode = context.mode
+
+    bpy.ops.object.mode_set(mode='POSE')
+    lx = armature.pose.bones[SCALED_OBSERVER_BNAME].matrix[0][3]
+    ly = armature.pose.bones[SCALED_OBSERVER_BNAME].matrix[1][3]
+    lz = armature.pose.bones[SCALED_OBSERVER_BNAME].matrix[2][3]
     bpy.ops.object.mode_set(mode='EDIT')
 
     proxy_actual_bone = armature.data.edit_bones.new(name=PROXY_ACTUAL_BNAME)
@@ -115,22 +120,38 @@ def create_proxy_empty_pair(context, armature):
 
     proxy_scaled_bone = armature.data.edit_bones.new(name=PROXY_SCALED_BNAME)
     proxy_scaled_bname = proxy_scaled_bone.name
-    proxy_scaled_bone.head = mathutils.Vector(TEMP_BONE_HEAD)
-    proxy_scaled_bone.tail = mathutils.Vector(TEMP_BONE_TAIL)
+    # if new scaled bone should use the scaled observer position, then do it
+    if use_obs_loc:
+        proxy_scaled_bone.head = mathutils.Vector(TEMP_BONE_HEAD) + mathutils.Vector((lx, ly, lz))
+        proxy_scaled_bone.tail = mathutils.Vector(TEMP_BONE_TAIL) + mathutils.Vector((lx, ly, lz))
+    else:
+        proxy_scaled_bone.head = mathutils.Vector(TEMP_BONE_HEAD)
+        proxy_scaled_bone.tail = mathutils.Vector(TEMP_BONE_TAIL)
     proxy_scaled_bone.parent = armature.data.edit_bones[SCALED_WINDOW_BNAME]
 
     proxy_scaled_focus_bone = armature.data.edit_bones.new(name=PROXY_SCALED_FOCUS_BNAME)
     proxy_scaled_focus_bname = proxy_scaled_focus_bone.name
-    proxy_scaled_focus_bone.head = mathutils.Vector(TEMP_BONE_HEAD)
-    proxy_scaled_focus_bone.tail = mathutils.Vector(TEMP_BONE_TAIL)
+    # if new scaled bone should use the scaled observer position, then do it
+    if use_obs_loc:
+        proxy_scaled_focus_bone.head = mathutils.Vector(TEMP_BONE_HEAD) + mathutils.Vector((lx, ly, lz))
+        proxy_scaled_focus_bone.tail = mathutils.Vector(TEMP_BONE_TAIL) + mathutils.Vector((lx, ly, lz))
+    else:
+        proxy_scaled_focus_bone.head = mathutils.Vector(TEMP_BONE_HEAD)
+        proxy_scaled_focus_bone.tail = mathutils.Vector(TEMP_BONE_TAIL)
     proxy_scaled_focus_bone.parent = proxy_scaled_bone
-    # switch back to previous view3d mode
-    bpy.ops.object.mode_set(mode=old_3dview_mode)
+
+    # switch to Pose mode to allow adding drivers, and to set pose bone location(s)
+    bpy.ops.object.mode_set(mode='POSE')
 
     # add driver to actual bone to make it scale with scaled bone
     add_bone_scl_drivers(armature, proxy_actual_bname, proxy_scaled_focus_bname, SCALED_OBSERVER_BNAME)
     add_bone_loc_drivers(armature, proxy_actual_bname, proxy_scaled_bname, SCALED_OBSERVER_BNAME)
     add_bone_rot_drivers(armature, proxy_actual_bname, proxy_scaled_bname)
+
+    # switch back to previous view3d mode
+    bpy.ops.object.mode_set(mode=old_3dview_mode)
+
+    return proxy_actual_bname, proxy_scaled_bname
 
 def add_bone_scl_drivers(armature, proxy_actual_bname, proxy_scaled_focus_bname, s_obs_bname):
     drv_scale_x = armature.pose.bones[proxy_actual_bname].driver_add("scale", 0).driver
@@ -273,7 +294,7 @@ def add_bone_loc_drivers(armature, proxy_actual_bname, proxy_scaled_bname, s_obs
     drv_loc_z.expression = "("+var_scaled_z.name+" - "+v_obs_z.name+") * self.id_data[\"mega_mini_scale\"] * self.scale.z"
 
 def add_bone_rot_drivers(armature, proxy_actual_bname, proxy_scaled_bname):
-    # ensure pose bone uses Euler rotation, because this Euler is only rotation mode available due to Drivers usage
+    # ensure pose bone uses Euler rotation, because Euler is only rotation mode available due to Drivers usage
     armature.pose.bones[proxy_actual_bname].rotation_mode = 'XYZ'
     # X
     drv_rot_x = armature.pose.bones[proxy_actual_bname].driver_add('rotation_euler', 0).driver
@@ -318,17 +339,56 @@ class MEGAMINI_CreateRigProxyPair(bpy.types.Operator):
 
     def execute(self, context):
         arm_ob = context.active_object
+        # error checks
         if arm_ob is None:
-            self.report({'ERROR'}, "Unable to Create Proxy Pair because no MegaMini rig object selected.")
+            self.report({'ERROR'}, "Unable to Create Proxy Pair because there is no Active Object.")
+            return {'CANCELLED'}
+        if arm_ob.type != 'ARMATURE':
+            self.report({'ERROR'}, "Unable to Create Proxy Pair because Active Object is not a MegaMini Rig.")
             return {'CANCELLED'}
         if arm_ob.data.bones.get(SCALED_OBSERVER_BNAME) is None:
             self.report({'ERROR'}, "Unable to Create Proxy Pair because because Scaled Observer bone not found " +
-                "in MegaMini rig active object.")
+                "in MegaMini Rig Active Object.")
             return {'CANCELLED'}
         if arm_ob.data.bones.get(SCALED_WINDOW_BNAME) is None:
             self.report({'ERROR'}, "Unable to Create Proxy Pair because because Scaled Window bone not found " +
-                "in MegaMini rig active object.")
+                "in MegaMini Rig Active Object.")
             return {'CANCELLED'}
+        # create
+        create_proxy_empty_pair(context, arm_ob, True)
+        return {'FINISHED'}
 
-        create_proxy_empty_pair(context, arm_ob)
+class MEGAMINI_AttachRigProxyPair(bpy.types.Operator):
+    bl_description = "Add to MegaMini Rig and attach all selected object(s) to MegaMini rig. Rig must be\n" + \
+        "selected last, and all other objects will be parented to rig. TODO Note: this uses current position\n" + \
+        "of rig's Observer"
+    bl_idname = "mega_mini.attach_proxy_pair"
+    bl_label = "Attach to Rig"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        arm_ob = context.active_object
+        # error checks
+        if arm_ob is None:
+            self.report({'ERROR'}, "Unable to Create Proxy Pair because there is no Active Object.")
+            return {'CANCELLED'}
+        if arm_ob.type != 'ARMATURE':
+            self.report({'ERROR'}, "Unable to Create Proxy Pair because Active Object is not a MegaMini Rig.")
+            return {'CANCELLED'}
+        if len(context.selected_objects) < 1:
+            self.report({'ERROR'}, "Unable to attach to MegaMini Rig because no object(s) selected")
+            return {'CANCELLED'}
+        # expand the rig by creating new bones in the rig
+        proxy_actual_bname, proxy_scaled_bname = create_proxy_empty_pair(context, arm_ob, True)
+
+        old_3dview_mode = context.mode
+        bpy.ops.object.mode_set(mode='POSE')
+
+        # make the new Actual bone the active bone, to be used for parenting objects
+        arm_ob.data.bones.active = arm_ob.data.bones[proxy_actual_bname]
+
+        # parent all the selected object(s) to the new Actual bone
+        bpy.ops.object.parent_set(type='BONE')
+        bpy.ops.object.mode_set(mode=old_3dview_mode)
+
         return {'FINISHED'}

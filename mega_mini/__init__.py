@@ -29,7 +29,7 @@ bl_info = {
 import bpy
 from bpy.props import PointerProperty
 
-from .panels import (MEGAMINI_CreateMegaMiniRig, MEGAMINI_CreateRigProxyPair)
+from .panels import (MEGAMINI_CreateMegaMiniRig, MEGAMINI_CreateRigProxyPair, MEGAMINI_AttachRigProxyPair)
 
 if bpy.app.version < (2,80,0):
     Region = "TOOLS"
@@ -61,12 +61,14 @@ class MEGAMINI_PT_Proxy(bpy.types.Panel):
         box = layout.box()
         box.label(text="Create Proxy Pair")
         box.operator("mega_mini.create_proxy_pair")
+        box.operator("mega_mini.attach_proxy_pair")
 
 classes = [
     MEGAMINI_PT_Observer,
     MEGAMINI_PT_Proxy,
     MEGAMINI_CreateMegaMiniRig,
     MEGAMINI_CreateRigProxyPair,
+    MEGAMINI_AttachRigProxyPair,
 ]
 
 def register():
