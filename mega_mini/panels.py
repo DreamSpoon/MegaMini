@@ -111,7 +111,6 @@ def create_proxy_empty_pair(context, armature):
     proxy_actual_bname = proxy_actual_bone.name
     proxy_actual_bone.head = mathutils.Vector(TEMP_BONE_HEAD)
     proxy_actual_bone.tail = mathutils.Vector(TEMP_BONE_TAIL)
-    # testing ********************
     proxy_actual_bone.parent = armature.data.edit_bones[ACTUAL_OBSERVER_BNAME]
 
     proxy_scaled_bone = armature.data.edit_bones.new(name=PROXY_SCALED_BNAME)
@@ -223,7 +222,7 @@ def add_bone_loc_drivers(armature, proxy_actual_bname, proxy_scaled_bname, s_obs
     var_obs_x.targets[0].transform_space = 'LOCAL_SPACE'
     var_obs_x.targets[0].data_path = "location.x"
     # driver X
-    drv_loc_x.expression = "("+var_scaled_x.name+" - "+var_obs_x.name+") * self.id_data[\"mega_mini_scale\"] * sqrt(self.scale.x)"
+    drv_loc_x.expression = "("+var_scaled_x.name+" - "+var_obs_x.name+") * self.id_data[\"mega_mini_scale\"] * self.scale.x"
 
     # Y
     drv_loc_y = armature.pose.bones[proxy_actual_bname].driver_add('location', 1).driver
@@ -247,7 +246,7 @@ def add_bone_loc_drivers(armature, proxy_actual_bname, proxy_scaled_bname, s_obs
     var_obs_y.targets[0].transform_space = 'LOCAL_SPACE'
     var_obs_y.targets[0].data_path = "location.y"
     # driver Y
-    drv_loc_y.expression = "("+var_scaled_y.name+" - "+var_obs_y.name+") * self.id_data[\"mega_mini_scale\"] * sqrt(self.scale.y)"
+    drv_loc_y.expression = "("+var_scaled_y.name+" - "+var_obs_y.name+") * self.id_data[\"mega_mini_scale\"] * self.scale.y"
 
     # Z
     drv_loc_z = armature.pose.bones[proxy_actual_bname].driver_add('location', 2).driver
@@ -271,7 +270,7 @@ def add_bone_loc_drivers(armature, proxy_actual_bname, proxy_scaled_bname, s_obs
     v_obs_z.targets[0].transform_space = 'LOCAL_SPACE'
     v_obs_z.targets[0].data_path = "location.z"
     # driver Z
-    drv_loc_z.expression = "("+var_scaled_z.name+" - "+v_obs_z.name+") * self.id_data[\"mega_mini_scale\"] * sqrt(self.scale.z)"
+    drv_loc_z.expression = "("+var_scaled_z.name+" - "+v_obs_z.name+") * self.id_data[\"mega_mini_scale\"] * self.scale.z"
 
 def add_bone_rot_drivers(armature, proxy_actual_bname, proxy_scaled_bname):
     # ensure pose bone uses Euler rotation, because this Euler is only rotation mode available due to Drivers usage
