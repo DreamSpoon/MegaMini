@@ -80,6 +80,9 @@ def create_mega_mini_armature(context, mega_mini_scale):
     scaled_obs_bconst.target = armature
     scaled_obs_bconst.subtarget = actual_obs_name
     scaled_obs_bconst.use_offset = True
+    # change space types to LOCAL, to prevent problems if MegaMini rig is moved
+    scaled_obs_bconst.target_space = 'LOCAL'
+    scaled_obs_bconst.owner_space = 'LOCAL'
     # add a driver to scale the influence by the armature's mega_mini_scale value
     add_bconst_scl_inf_driver(scaled_obs_bconst)
 
@@ -108,6 +111,8 @@ def create_proxy_empty_pair(context, armature):
     proxy_actual_bname = proxy_actual_bone.name
     proxy_actual_bone.head = mathutils.Vector(TEMP_BONE_HEAD)
     proxy_actual_bone.tail = mathutils.Vector(TEMP_BONE_TAIL)
+    # testing ********************
+    proxy_actual_bone.parent = armature.data.edit_bones[ACTUAL_OBSERVER_BNAME]
 
     proxy_scaled_bone = armature.data.edit_bones.new(name=PROXY_SCALED_BNAME)
     proxy_scaled_bname = proxy_scaled_bone.name
@@ -206,6 +211,7 @@ def add_bone_loc_drivers(armature, proxy_actual_bname, proxy_scaled_bname, s_obs
     var_scaled_x.targets[0].id        = armature
     var_scaled_x.targets[0].bone_target        = proxy_scaled_bname
     var_scaled_x.targets[0].transform_type = 'LOC_X'
+    var_scaled_x.targets[0].transform_space = 'LOCAL_SPACE'
     var_scaled_x.targets[0].data_path = "location.x"
     # observer X
     var_obs_x = drv_loc_x.variables.new()
@@ -214,6 +220,7 @@ def add_bone_loc_drivers(armature, proxy_actual_bname, proxy_scaled_bname, s_obs
     var_obs_x.targets[0].id        = armature
     var_obs_x.targets[0].bone_target        = s_obs_bname
     var_obs_x.targets[0].transform_type = 'LOC_X'
+    var_obs_x.targets[0].transform_space = 'LOCAL_SPACE'
     var_obs_x.targets[0].data_path = "location.x"
     # driver X
     drv_loc_x.expression = "("+var_scaled_x.name+" - "+var_obs_x.name+") * self.id_data[\"mega_mini_scale\"] * sqrt(self.scale.x)"
@@ -228,6 +235,7 @@ def add_bone_loc_drivers(armature, proxy_actual_bname, proxy_scaled_bname, s_obs
     var_scaled_y.targets[0].id        = armature
     var_scaled_y.targets[0].bone_target        = proxy_scaled_bname
     var_scaled_y.targets[0].transform_type = 'LOC_Y'
+    var_scaled_y.targets[0].transform_space = 'LOCAL_SPACE'
     var_scaled_y.targets[0].data_path = "location.y"
     # observer Y
     var_obs_y = drv_loc_y.variables.new()
@@ -236,6 +244,7 @@ def add_bone_loc_drivers(armature, proxy_actual_bname, proxy_scaled_bname, s_obs
     var_obs_y.targets[0].id        = armature
     var_obs_y.targets[0].bone_target        = s_obs_bname
     var_obs_y.targets[0].transform_type = 'LOC_Y'
+    var_obs_y.targets[0].transform_space = 'LOCAL_SPACE'
     var_obs_y.targets[0].data_path = "location.y"
     # driver Y
     drv_loc_y.expression = "("+var_scaled_y.name+" - "+var_obs_y.name+") * self.id_data[\"mega_mini_scale\"] * sqrt(self.scale.y)"
@@ -250,6 +259,7 @@ def add_bone_loc_drivers(armature, proxy_actual_bname, proxy_scaled_bname, s_obs
     var_scaled_z.targets[0].id        = armature
     var_scaled_z.targets[0].bone_target        = proxy_scaled_bname
     var_scaled_z.targets[0].transform_type = 'LOC_Z'
+    var_scaled_z.targets[0].transform_space = 'LOCAL_SPACE'
     var_scaled_z.targets[0].data_path = "location.z"
     # observer Z
     v_obs_z = drv_loc_z.variables.new()
@@ -258,6 +268,7 @@ def add_bone_loc_drivers(armature, proxy_actual_bname, proxy_scaled_bname, s_obs
     v_obs_z.targets[0].id        = armature
     v_obs_z.targets[0].bone_target        = s_obs_bname
     v_obs_z.targets[0].transform_type = 'LOC_Z'
+    v_obs_z.targets[0].transform_space = 'LOCAL_SPACE'
     v_obs_z.targets[0].data_path = "location.z"
     # driver Z
     drv_loc_z.expression = "("+var_scaled_z.name+" - "+v_obs_z.name+") * self.id_data[\"mega_mini_scale\"] * sqrt(self.scale.z)"
@@ -273,6 +284,7 @@ def add_bone_rot_drivers(armature, proxy_actual_bname, proxy_scaled_bname):
     var_scaled_x.targets[0].id        = armature
     var_scaled_x.targets[0].bone_target        = proxy_scaled_bname
     var_scaled_x.targets[0].transform_type = 'ROT_X'
+    var_scaled_x.targets[0].transform_space = 'LOCAL_SPACE'
     var_scaled_x.targets[0].data_path = "rotation_euler.x"
     drv_rot_x.expression = var_scaled_x.name
     # Y
@@ -283,6 +295,7 @@ def add_bone_rot_drivers(armature, proxy_actual_bname, proxy_scaled_bname):
     var_scaled_y.targets[0].id        = armature
     var_scaled_y.targets[0].bone_target        = proxy_scaled_bname
     var_scaled_y.targets[0].transform_type = 'ROT_Y'
+    var_scaled_y.targets[0].transform_space = 'LOCAL_SPACE'
     var_scaled_y.targets[0].data_path = "rotation_euler.y"
     drv_rot_y.expression = var_scaled_y.name
     # Z
@@ -293,6 +306,7 @@ def add_bone_rot_drivers(armature, proxy_actual_bname, proxy_scaled_bname):
     var_scaled_z.targets[0].id        = armature
     var_scaled_z.targets[0].bone_target        = proxy_scaled_bname
     var_scaled_z.targets[0].transform_type = 'ROT_Z'
+    var_scaled_z.targets[0].transform_space = 'LOCAL_SPACE'
     var_scaled_z.targets[0].data_path = "rotation_euler.z"
     drv_rot_z.expression = var_scaled_z.name
 
