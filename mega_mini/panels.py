@@ -376,6 +376,11 @@ class MEGAMINI_AttachRigProxyPair(bpy.types.Operator):
         # expand the rig by creating new bones in the rig
         proxy_actual_bname, proxy_scaled_bname = create_proxy_empty_pair(context, arm_ob, True)
 
+        # debug: change current frame of animation, to force Blender to update the armature, drivers, etc. in the
+        # dependency graph - which Blender isn't automatically doing, for some reason...
+        # all of this is done avoid errors with locations of objects/bones when parenting objects to bones
+        bpy.context.scene.frame_set(bpy.context.scene.frame_current)
+
         # make the new Actual bone the active bone, to be used for parenting objects
         arm_ob.data.bones.active = arm_ob.data.bones[proxy_actual_bname]
         # parent all the selected object(s) to the new Actual bone
