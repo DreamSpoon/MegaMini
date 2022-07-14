@@ -102,14 +102,12 @@ class MEGAMINI_CreateMegaMiniRig(bpy.types.Operator):
         create_mega_mini_armature(context, mega_mini_scale)
         return {'FINISHED'}
 
+# "edit bones" must be created at origin (head at origin, ...), so that pose bone locations can be used by drivers
+# to perform offsets, distance calculations, etc.
 def create_proxy_empty_pair(context, armature, use_obs_loc):
     # save old view3d mode and enter Edit mode, to add bones to armature
     old_3dview_mode = context.mode
 
-    bpy.ops.object.mode_set(mode='POSE')
-    lx = armature.pose.bones[SCALED_OBSERVER_BNAME].matrix[0][3]
-    ly = armature.pose.bones[SCALED_OBSERVER_BNAME].matrix[1][3]
-    lz = armature.pose.bones[SCALED_OBSERVER_BNAME].matrix[2][3]
     bpy.ops.object.mode_set(mode='EDIT')
 
     proxy_actual_bone = armature.data.edit_bones.new(name=PROXY_ACTUAL_BNAME)
@@ -120,24 +118,14 @@ def create_proxy_empty_pair(context, armature, use_obs_loc):
 
     proxy_scaled_bone = armature.data.edit_bones.new(name=PROXY_SCALED_BNAME)
     proxy_scaled_bname = proxy_scaled_bone.name
-    # if new scaled bone should use the scaled observer position, then do it
-    if use_obs_loc:
-        proxy_scaled_bone.head = mathutils.Vector(TEMP_BONE_HEAD) + mathutils.Vector((lx, ly, lz))
-        proxy_scaled_bone.tail = mathutils.Vector(TEMP_BONE_TAIL) + mathutils.Vector((lx, ly, lz))
-    else:
-        proxy_scaled_bone.head = mathutils.Vector(TEMP_BONE_HEAD)
-        proxy_scaled_bone.tail = mathutils.Vector(TEMP_BONE_TAIL)
+    proxy_scaled_bone.head = mathutils.Vector(TEMP_BONE_HEAD)
+    proxy_scaled_bone.tail = mathutils.Vector(TEMP_BONE_TAIL)
     proxy_scaled_bone.parent = armature.data.edit_bones[SCALED_WINDOW_BNAME]
 
     proxy_scaled_focus_bone = armature.data.edit_bones.new(name=PROXY_SCALED_FOCUS_BNAME)
     proxy_scaled_focus_bname = proxy_scaled_focus_bone.name
-    # if new scaled bone should use the scaled observer position, then do it
-    if use_obs_loc:
-        proxy_scaled_focus_bone.head = mathutils.Vector(TEMP_BONE_HEAD) + mathutils.Vector((lx, ly, lz))
-        proxy_scaled_focus_bone.tail = mathutils.Vector(TEMP_BONE_TAIL) + mathutils.Vector((lx, ly, lz))
-    else:
-        proxy_scaled_focus_bone.head = mathutils.Vector(TEMP_BONE_HEAD)
-        proxy_scaled_focus_bone.tail = mathutils.Vector(TEMP_BONE_TAIL)
+    proxy_scaled_focus_bone.head = mathutils.Vector(TEMP_BONE_HEAD)
+    proxy_scaled_focus_bone.tail = mathutils.Vector(TEMP_BONE_TAIL)
     proxy_scaled_focus_bone.parent = proxy_scaled_bone
 
     # switch to Pose mode to allow adding drivers, and to set pose bone location(s)
@@ -147,6 +135,13 @@ def create_proxy_empty_pair(context, armature, use_obs_loc):
     add_bone_scl_drivers(armature, proxy_actual_bname, proxy_scaled_focus_bname, SCALED_OBSERVER_BNAME)
     add_bone_loc_drivers(armature, proxy_actual_bname, proxy_scaled_bname, SCALED_OBSERVER_BNAME)
     add_bone_rot_drivers(armature, proxy_actual_bname, proxy_scaled_bname)
+
+    # if new scaled bone should use the scaled observer position, then do it
+    if use_obs_loc:
+        # get position of Scaled observer, with it's "Copy Location" constraint included, by using "matrix"
+        armature.pose.bones[proxy_scaled_bname].location = (armature.pose.bones[SCALED_OBSERVER_BNAME].matrix[0][3],
+                                                            armature.pose.bones[SCALED_OBSERVER_BNAME].matrix[1][3],
+                                                            armature.pose.bones[SCALED_OBSERVER_BNAME].matrix[2][3])
 
     # switch back to previous view3d mode
     bpy.ops.object.mode_set(mode=old_3dview_mode)
@@ -381,14 +376,9 @@ class MEGAMINI_AttachRigProxyPair(bpy.types.Operator):
         # expand the rig by creating new bones in the rig
         proxy_actual_bname, proxy_scaled_bname = create_proxy_empty_pair(context, arm_ob, True)
 
-        old_3dview_mode = context.mode
-        bpy.ops.object.mode_set(mode='POSE')
-
         # make the new Actual bone the active bone, to be used for parenting objects
         arm_ob.data.bones.active = arm_ob.data.bones[proxy_actual_bname]
-
         # parent all the selected object(s) to the new Actual bone
         bpy.ops.object.parent_set(type='BONE')
-        bpy.ops.object.mode_set(mode=old_3dview_mode)
 
         return {'FINISHED'}
