@@ -20,10 +20,11 @@ bl_info = {
     "name": "Mega Mini",
     "description": "Use 'forced perspective' optical illusion to 'condense space' between objects. Display far away objects at a smaller scale and closer distance than would be realistic.",
     "author": "Dave",
-    "version": (0, 0, 2),
+    "version": (0, 1, 0),
     "blender": (2, 80, 0),
     "location": "View 3D -> Tools -> MegaMini",
     "category": "Other",
+    "wiki_url": "https://github.com/DreamSpoon/MegaMini#readme",
 }
 
 import bpy

@@ -247,7 +247,7 @@ def add_bone_loc_drivers(armature, proxy_actual_bname, proxy_scaled_bname, s_obs
     var_proxy_scaled_x.targets[0].transform_type = 'LOC_X'
     var_proxy_scaled_x.targets[0].transform_space = 'LOCAL_SPACE'
     var_proxy_scaled_x.targets[0].data_path = "location.x"
-    # observer X
+    # scaled observer X
     var_scaled_obs_x = drv_loc_x.variables.new()
     var_scaled_obs_x.type = 'TRANSFORMS'
     var_scaled_obs_x.name                 = "scaled_obs_x"
@@ -256,7 +256,7 @@ def add_bone_loc_drivers(armature, proxy_actual_bname, proxy_scaled_bname, s_obs
     var_scaled_obs_x.targets[0].transform_type = 'LOC_X'
     var_scaled_obs_x.targets[0].transform_space = 'LOCAL_SPACE'
     var_scaled_obs_x.targets[0].data_path = "location.x"
-    # self scale X
+    # bone self scale X
     var_self_scale_x = drv_loc_x.variables.new()
     var_self_scale_x.type = 'TRANSFORMS'
     var_self_scale_x.name                 = "self_scale_x"
@@ -277,7 +277,7 @@ def add_bone_loc_drivers(armature, proxy_actual_bname, proxy_scaled_bname, s_obs
 
     # Y
     drv_loc_y = armature.pose.bones[proxy_actual_bname].driver_add('location', 1).driver
-    # mini Y
+    # proxy scaled Y
     var_proxy_scaled_y = drv_loc_y.variables.new()
     var_proxy_scaled_y.type = 'TRANSFORMS'
     var_proxy_scaled_y.name                 = "proxy_scaled_y"
@@ -286,7 +286,7 @@ def add_bone_loc_drivers(armature, proxy_actual_bname, proxy_scaled_bname, s_obs
     var_proxy_scaled_y.targets[0].transform_type = 'LOC_Y'
     var_proxy_scaled_y.targets[0].transform_space = 'LOCAL_SPACE'
     var_proxy_scaled_y.targets[0].data_path = "location.y"
-    # observer Y
+    # scaled observer Y
     var_scaled_obs_y = drv_loc_y.variables.new()
     var_scaled_obs_y.type = 'TRANSFORMS'
     var_scaled_obs_y.name                 = "scaled_obs_y"
@@ -295,7 +295,7 @@ def add_bone_loc_drivers(armature, proxy_actual_bname, proxy_scaled_bname, s_obs
     var_scaled_obs_y.targets[0].transform_type = 'LOC_Y'
     var_scaled_obs_y.targets[0].transform_space = 'LOCAL_SPACE'
     var_scaled_obs_y.targets[0].data_path = "location.y"
-    # self scale Y
+    # bone self scale Y
     var_self_scale_y = drv_loc_y.variables.new()
     var_self_scale_y.type = 'TRANSFORMS'
     var_self_scale_y.name                 = "self_scale_y"
@@ -316,7 +316,7 @@ def add_bone_loc_drivers(armature, proxy_actual_bname, proxy_scaled_bname, s_obs
 
     # Z
     drv_loc_z = armature.pose.bones[proxy_actual_bname].driver_add('location', 2).driver
-    # mini Z
+    # proxy scaled Z
     var_proxy_scaled_z = drv_loc_z.variables.new()
     var_proxy_scaled_z.type = 'TRANSFORMS'
     var_proxy_scaled_z.name                 = "proxy_scaled_z"
@@ -325,7 +325,7 @@ def add_bone_loc_drivers(armature, proxy_actual_bname, proxy_scaled_bname, s_obs
     var_proxy_scaled_z.targets[0].transform_type = 'LOC_Z'
     var_proxy_scaled_z.targets[0].transform_space = 'LOCAL_SPACE'
     var_proxy_scaled_z.targets[0].data_path = "location.z"
-    # observer Z
+    # scaled observer Z
     var_scaled_obs_z = drv_loc_z.variables.new()
     var_scaled_obs_z.type = 'TRANSFORMS'
     var_scaled_obs_z.name                 = "scaled_obs_z"
@@ -334,7 +334,7 @@ def add_bone_loc_drivers(armature, proxy_actual_bname, proxy_scaled_bname, s_obs
     var_scaled_obs_z.targets[0].transform_type = 'LOC_Z'
     var_scaled_obs_z.targets[0].transform_space = 'LOCAL_SPACE'
     var_scaled_obs_z.targets[0].data_path = "location.z"
-    # self scale Z
+    # bone self scale Z
     var_self_scale_z = drv_loc_z.variables.new()
     var_self_scale_z.type = 'TRANSFORMS'
     var_self_scale_z.name                 = "self_scale_z"

@@ -8,10 +8,10 @@ https://en.wikipedia.org/wiki/Forced_perspective
 
 TODO: Use images in the explanation. YouTube video also coming soon, this is hard to explain with words...
 
-## Install Addon in Blender
+## Install Addon in Blender - Under
 1) Start Blender
 2) Go to User Preferences -> Addons -> Install addon from file
-3) Choose AMH2B.zip file you downloaded (available for download from 'Releases' section of this website)
+3) Choose MegaMini.zip file you downloaded (available for download from 'Releases' section of this website)
 
 Done! The addon is now installed, but **you need to enable it by clicking the checkbox beside it's name**, in the addons window.
 
