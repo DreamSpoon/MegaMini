@@ -16,11 +16,15 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+
+### TODO: Keyframe initial positions of ScaledProxy - to prevent loss of data when user selects
+#         all bones and press Ctrl-G, Ctrl-R, Ctrl-S, etc.
+
 bl_info = {
     "name": "Mega Mini",
     "description": "Use 'forced perspective' optical illusion to 'condense space' between objects. Display far away objects at a smaller scale and closer distance than would be realistic.",
     "author": "Dave",
-    "version": (0, 1, 0),
+    "version": (0, 1, 1),
     "blender": (2, 80, 0),
     "location": "View 3D -> Tools -> MegaMini",
     "category": "Other",
