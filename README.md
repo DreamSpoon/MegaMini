@@ -8,7 +8,7 @@ https://en.wikipedia.org/wiki/Forced_perspective
 
 TODO: Use images in the explanation. YouTube video also coming soon, this is hard to explain with words...
 
-## Install Addon in Blender - Under
+## Install Addon in Blender
 1) Start Blender
 2) Go to User Preferences -> Addons -> Install addon from file
 3) Choose MegaMini.zip file you downloaded (available for download from 'Releases' section of this website)

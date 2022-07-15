@@ -160,53 +160,15 @@ def create_proxy_bone_pair(context, armature, use_obs_loc):
 def add_bone_scl_drivers(armature, proxy_actual_bname, proxy_scaled_focus_bname, s_obs_bname):
     drv_scale_x = armature.pose.bones[proxy_actual_bname].driver_add("scale", 0).driver
 
-    obs_x = drv_scale_x.variables.new()
-    obs_x.type = 'TRANSFORMS'
-    obs_x.name                 = "obs_x"
-    obs_x.targets[0].id        = armature
-    obs_x.targets[0].bone_target        = s_obs_bname
-    obs_x.targets[0].transform_type = 'LOC_X'
-    obs_x.targets[0].data_path = "location.x"
-
-    obs_y = drv_scale_x.variables.new()
-    obs_y.type = 'TRANSFORMS'
-    obs_y.name                 = "obs_y"
-    obs_y.targets[0].id        = armature
-    obs_y.targets[0].bone_target        = s_obs_bname
-    obs_y.targets[0].transform_type = 'LOC_Y'
-    obs_y.targets[0].data_path = "location.y"
-
-    obs_z = drv_scale_x.variables.new()
-    obs_z.type = 'TRANSFORMS'
-    obs_z.name                 = "obs_z"
-    obs_z.targets[0].id        = armature
-    obs_z.targets[0].bone_target        = s_obs_bname
-    obs_z.targets[0].transform_type = 'LOC_Z'
-    obs_z.targets[0].data_path = "location.z"
-
-    focus_x = drv_scale_x.variables.new()
-    focus_x.type = 'TRANSFORMS'
-    focus_x.name                 = "focus_x"
-    focus_x.targets[0].id        = armature
-    focus_x.targets[0].bone_target        = proxy_scaled_focus_bname
-    focus_x.targets[0].transform_type = 'LOC_X'
-    focus_x.targets[0].data_path = "location.x"
-
-    focus_y = drv_scale_x.variables.new()
-    focus_y.type = 'TRANSFORMS'
-    focus_y.name                 = "focus_y"
-    focus_y.targets[0].id        = armature
-    focus_y.targets[0].bone_target        = proxy_scaled_focus_bname
-    focus_y.targets[0].transform_type = 'LOC_Y'
-    focus_y.targets[0].data_path = "location.y"
-
-    focus_z = drv_scale_x.variables.new()
-    focus_z.type = 'TRANSFORMS'
-    focus_z.name                 = "focus_z"
-    focus_z.targets[0].id        = armature
-    focus_z.targets[0].bone_target        = proxy_scaled_focus_bname
-    focus_z.targets[0].transform_type = 'LOC_Z'
-    focus_z.targets[0].data_path = "location.z"
+    scaled_dist = drv_scale_x.variables.new()
+    scaled_dist.type = 'LOC_DIFF'
+    scaled_dist.name                 = "scaled_dist"
+    scaled_dist.targets[0].id        = armature
+    scaled_dist.targets[0].bone_target        = proxy_scaled_focus_bname
+    scaled_dist.targets[0].transform_space = 'LOCAL_SPACE'
+    scaled_dist.targets[1].id        = armature
+    scaled_dist.targets[1].bone_target        = s_obs_bname
+    scaled_dist.targets[1].transform_space = 'LOCAL_SPACE'
 
     overall_scale = drv_scale_x.variables.new()
     overall_scale.type = 'SINGLE_PROP'
@@ -223,10 +185,7 @@ def add_bone_scl_drivers(armature, proxy_actual_bname, proxy_scaled_focus_bname,
     # Actual's forced perspective scaling value equals
     #     1 over square root of
     #         1 plus actual distance (un-scaled distance) from Scaled Observer to Scaled Focus
-    drv_scale_x.expression = "1 / sqrt(1 + "+overall_scale.name+" * sqrt( " + \
-        "("+focus_x.name+" - "+obs_x.name+") * ("+focus_x.name+" - "+obs_x.name+") + " + \
-        "("+focus_y.name+" - "+obs_y.name+") * ("+focus_y.name+" - "+obs_y.name+") + " + \
-        "("+focus_z.name+" - "+obs_z.name+") * ("+focus_z.name+" - "+obs_z.name+") ) ) * "+one_bone_scale.name
+    drv_scale_x.expression = "1 / sqrt(1 + "+overall_scale.name+" * "+scaled_dist.name+") * "+one_bone_scale.name
 
     # Y and Z scale are copies of X scale value
     drv_scale_y = armature.pose.bones[proxy_actual_bname].driver_add('scale', 1).driver
