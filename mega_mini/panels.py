@@ -149,6 +149,9 @@ def create_proxy_bone_pair(context, armature, use_obs_loc):
         armature.pose.bones[proxy_scaled_bname].location = (armature.pose.bones[SCALED_OBSERVER_BNAME].matrix[0][3],
                                                             armature.pose.bones[SCALED_OBSERVER_BNAME].matrix[1][3],
                                                             armature.pose.bones[SCALED_OBSERVER_BNAME].matrix[2][3])
+        # insert keyframe, to prevent data loss, i.e. position erased, if user does menu Pose -> Clear Transform,
+        # presses Ctrl-G to reset location, etc.
+        armature.pose.bones[proxy_scaled_bname].keyframe_insert(data_path="location")
 
     armature.pose.bones[proxy_actual_bname][OBJ_PROP_BONE_SCL_MULT] = 1.0
 
