@@ -20,6 +20,7 @@ import bpy
 import mathutils
 
 OBJ_PROP_SCALE = "mega_mini_scale"
+OBJ_PROP_BONE_SCL_MULT = "mega_mini_bone_scl_mult"
 
 SCALED_WINDOW_BNAME = "ScaledWindow"
 SCALED_OBSERVER_BNAME = "ScaledObserver"
@@ -31,10 +32,10 @@ PROXY_ACTUAL_BNAME = "ActualProxy"
 PROXY_SCALED_BNAME = "ScaledProxy"
 PROXY_SCALED_FOCUS_BNAME = "ScaledFocusProxy"
 
-def add_bconst_scl_inf_driver(scaled_obs_bconst):
+def add_bconst_scl_influence_driver(scaled_obs_bconst):
     drv_copy_loc = scaled_obs_bconst.driver_add('influence').driver
     drv_copy_loc.use_self = True
-    drv_copy_loc.expression = "1 / self.id_data[\"mega_mini_scale\"]"
+    drv_copy_loc.expression = "1 / self.id_data[\""+OBJ_PROP_SCALE+"\"]"
 
 # Notes:
 #     - 'Actual Window' is the armature itself, 'Scaled Window' is intended to be like a 'TV remote controller',
@@ -84,7 +85,7 @@ def create_mega_mini_armature(context, mega_mini_scale):
     scaled_obs_bconst.target_space = 'LOCAL'
     scaled_obs_bconst.owner_space = 'LOCAL'
     # add a driver to scale the influence by the armature's mega_mini_scale value
-    add_bconst_scl_inf_driver(scaled_obs_bconst)
+    add_bconst_scl_influence_driver(scaled_obs_bconst)
 
     bpy.ops.object.mode_set(mode=old_3dview_mode)
 
@@ -104,7 +105,7 @@ class MEGAMINI_CreateMegaMiniRig(bpy.types.Operator):
 
 # "edit bones" must be created at origin (head at origin, ...), so that pose bone locations can be used by drivers
 # to perform offsets, distance calculations, etc.
-def create_proxy_empty_pair(context, armature, use_obs_loc):
+def create_proxy_bone_pair(context, armature, use_obs_loc):
     # save old view3d mode and enter Edit mode, to add bones to armature
     old_3dview_mode = context.mode
 
@@ -142,6 +143,8 @@ def create_proxy_empty_pair(context, armature, use_obs_loc):
         armature.pose.bones[proxy_scaled_bname].location = (armature.pose.bones[SCALED_OBSERVER_BNAME].matrix[0][3],
                                                             armature.pose.bones[SCALED_OBSERVER_BNAME].matrix[1][3],
                                                             armature.pose.bones[SCALED_OBSERVER_BNAME].matrix[2][3])
+
+    armature.pose.bones[proxy_actual_bname][OBJ_PROP_BONE_SCL_MULT] = 1.0
 
     # switch back to previous view3d mode
     bpy.ops.object.mode_set(mode=old_3dview_mode)
@@ -203,10 +206,11 @@ def add_bone_scl_drivers(armature, proxy_actual_bname, proxy_scaled_focus_bname,
     # Actual's forced perspective scaling value equals
     #     1 over square root of
     #         1 plus actual distance (un-scaled distance) from Scaled Observer to Scaled Focus
-    drv_scale_x.expression = "1 / sqrt(1 + self.id_data[\"mega_mini_scale\"] * sqrt( " + \
+    drv_scale_x.expression = "1 / sqrt(1 + self.id_data[\""+OBJ_PROP_SCALE+"\"] * sqrt( " + \
         "("+focus_x.name+" - "+obs_x.name+") * ("+focus_x.name+" - "+obs_x.name+") + " + \
         "("+focus_y.name+" - "+obs_y.name+") * ("+focus_y.name+" - "+obs_y.name+") + " + \
-        "("+focus_z.name+" - "+obs_z.name+") * ("+focus_z.name+" - "+obs_z.name+") ) )"
+        "("+focus_z.name+" - "+obs_z.name+") * ("+focus_z.name+" - "+obs_z.name+") ) ) * " + \
+        "self[\""+OBJ_PROP_BONE_SCL_MULT+"\"]"
 
     # Y and Z scale are copies of X scale value
     drv_scale_y = armature.pose.bones[proxy_actual_bname].driver_add('scale', 1).driver
@@ -238,7 +242,7 @@ def add_bone_loc_drivers(armature, proxy_actual_bname, proxy_scaled_bname, s_obs
     var_obs_x.targets[0].transform_space = 'LOCAL_SPACE'
     var_obs_x.targets[0].data_path = "location.x"
     # driver X
-    drv_loc_x.expression = "("+var_scaled_x.name+" - "+var_obs_x.name+") * self.id_data[\"mega_mini_scale\"] * self.scale.x"
+    drv_loc_x.expression = "("+var_scaled_x.name+" - "+var_obs_x.name+") * self.id_data[\""+OBJ_PROP_SCALE+"\"] * self.scale.x"
 
     # Y
     drv_loc_y = armature.pose.bones[proxy_actual_bname].driver_add('location', 1).driver
@@ -262,7 +266,7 @@ def add_bone_loc_drivers(armature, proxy_actual_bname, proxy_scaled_bname, s_obs
     var_obs_y.targets[0].transform_space = 'LOCAL_SPACE'
     var_obs_y.targets[0].data_path = "location.y"
     # driver Y
-    drv_loc_y.expression = "("+var_scaled_y.name+" - "+var_obs_y.name+") * self.id_data[\"mega_mini_scale\"] * self.scale.y"
+    drv_loc_y.expression = "("+var_scaled_y.name+" - "+var_obs_y.name+") * self.id_data[\""+OBJ_PROP_SCALE+"\"] * self.scale.y"
 
     # Z
     drv_loc_z = armature.pose.bones[proxy_actual_bname].driver_add('location', 2).driver
@@ -286,7 +290,7 @@ def add_bone_loc_drivers(armature, proxy_actual_bname, proxy_scaled_bname, s_obs
     v_obs_z.targets[0].transform_space = 'LOCAL_SPACE'
     v_obs_z.targets[0].data_path = "location.z"
     # driver Z
-    drv_loc_z.expression = "("+var_scaled_z.name+" - "+v_obs_z.name+") * self.id_data[\"mega_mini_scale\"] * self.scale.z"
+    drv_loc_z.expression = "("+var_scaled_z.name+" - "+v_obs_z.name+") * self.id_data[\""+OBJ_PROP_SCALE+"\"] * self.scale.z"
 
 def add_bone_rot_drivers(armature, proxy_actual_bname, proxy_scaled_bname):
     # ensure pose bone uses Euler rotation, because Euler is only rotation mode available due to Drivers usage
@@ -350,7 +354,7 @@ class MEGAMINI_CreateRigProxyPair(bpy.types.Operator):
                 "in MegaMini Rig Active Object.")
             return {'CANCELLED'}
         # create
-        create_proxy_empty_pair(context, arm_ob, True)
+        create_proxy_bone_pair(context, arm_ob, True)
         return {'FINISHED'}
 
 class MEGAMINI_AttachRigProxyPair(bpy.types.Operator):
@@ -374,7 +378,7 @@ class MEGAMINI_AttachRigProxyPair(bpy.types.Operator):
             self.report({'ERROR'}, "Unable to attach to MegaMini Rig because no object(s) selected")
             return {'CANCELLED'}
         # expand the rig by creating new bones in the rig
-        proxy_actual_bname, proxy_scaled_bname = create_proxy_empty_pair(context, arm_ob, True)
+        proxy_actual_bname, proxy_scaled_bname = create_proxy_bone_pair(context, arm_ob, True)
 
         # debug: change current frame of animation, to force Blender to update the armature, drivers, etc. in the
         # dependency graph - which Blender isn't automatically doing, for some reason...
