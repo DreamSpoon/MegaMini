@@ -191,12 +191,28 @@ def add_bone_scl_drivers(armature, proxy_actual_bname, proxy_scaled_focus_bname,
     #         1 plus actual distance (un-scaled distance) from Scaled Observer to Scaled Focus
     drv_scale_x.expression = "1 / sqrt(1 + "+v_mega_mini_scale.name+" * "+v_scaled_dist.name+") * "+v_self_bone_scale.name
 
-    # Y and Z scale are copies of X scale value
+    # Y scale is copy of X scale value
     drv_scale_y = armature.pose.bones[proxy_actual_bname].driver_add('scale', 1).driver
-    drv_scale_y.use_self = True
+    v_scale_y = drv_scale_y.variables.new()
+    v_scale_y.type = 'TRANSFORMS'
+    v_scale_y.name                 = "self_scl_x"
+    v_scale_y.targets[0].id        = armature
+    v_scale_y.targets[0].bone_target        = proxy_actual_bname
+    v_scale_y.targets[0].transform_type = 'SCALE_X'
+    v_scale_y.targets[0].transform_space = 'LOCAL_SPACE'
+    v_scale_y.targets[0].data_path = "scale.x"
+    drv_scale_y.expression = v_scale_y.name
+    # Z scale is copy of X scale value
     drv_scale_z = armature.pose.bones[proxy_actual_bname].driver_add('scale', 2).driver
-    drv_scale_z.use_self = True
-    drv_scale_y.expression = drv_scale_z.expression = "self.scale.x"
+    v_scale_z = drv_scale_z.variables.new()
+    v_scale_z.type = 'TRANSFORMS'
+    v_scale_z.name                 = "self_scl_x"
+    v_scale_z.targets[0].id        = armature
+    v_scale_z.targets[0].bone_target        = proxy_actual_bname
+    v_scale_z.targets[0].transform_type = 'SCALE_X'
+    v_scale_z.targets[0].transform_space = 'LOCAL_SPACE'
+    v_scale_z.targets[0].data_path = "scale.x"
+    drv_scale_z.expression = v_scale_z.name
 
 def add_bone_loc_drivers(armature, proxy_actual_bname, proxy_scaled_bname, s_obs_bname):
     # X
@@ -383,7 +399,7 @@ class MEGAMINI_CreateRigProxyPair(bpy.types.Operator):
 
 class MEGAMINI_AttachRigProxyPair(bpy.types.Operator):
     bl_description = "Add to MegaMini Rig and attach all selected object(s) to MegaMini rig. Rig must be\n" + \
-        "selected last, and all other objects will be parented to rig. TODO Note: this uses current position\n" + \
+        "selected last, and all other objects will be parented to rig. Note: this uses current position\n" + \
         "of rig's Observer"
     bl_idname = "mega_mini.attach_proxy_pair"
     bl_label = "Attach to Rig"
