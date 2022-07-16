@@ -18,6 +18,12 @@
 
 import bpy
 import mathutils
+import bmesh
+
+if bpy.app.version < (2,80,0):
+    from .imp_v27 import create_mesh_obj_from_pydata
+else:
+    from .imp_v28 import create_mesh_obj_from_pydata
 
 RIG_BASENAME = "MegaMini"
 SCALED_WINDOW_BNAME = "ProxyField"
@@ -108,6 +114,9 @@ class MEGAMINI_CreateMegaMiniRig(bpy.types.Operator):
             self.report({'ERROR'}, "Error in new Observer scale. Must be above zero.")
             return {'CANCELLED'}
         create_mega_mini_armature(context, mega_mini_scale)
+
+        create_widget_triangle()
+
         return {'FINISHED'}
 
 # "edit bones" must be created at origin (head at origin, ...), so that pose bone locations can be used by drivers
@@ -432,3 +441,8 @@ class MEGAMINI_AttachRigProxyPair(bpy.types.Operator):
         bpy.ops.object.parent_set(type='BONE')
 
         return {'FINISHED'}
+
+def create_widget_triangle():
+    verts = [(0, 0, 0), (1, 0, 0), (0, 1, 0)]
+    faces = [(0, 1, 2)]
+    create_mesh_obj_from_pydata(verts, faces)
