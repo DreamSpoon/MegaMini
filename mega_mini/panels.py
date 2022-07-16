@@ -169,10 +169,10 @@ def add_bone_scl_drivers(armature, proxy_actual_bname, proxy_scaled_focus_bname,
     v_scaled_dist.name                 = "scaled_dist"
     v_scaled_dist.targets[0].id        = armature
     v_scaled_dist.targets[0].bone_target        = proxy_scaled_focus_bname
-    v_scaled_dist.targets[0].transform_space = 'LOCAL_SPACE'
+    v_scaled_dist.targets[0].transform_space = 'WORLD_SPACE'
     v_scaled_dist.targets[1].id        = armature
     v_scaled_dist.targets[1].bone_target        = s_obs_bname
-    v_scaled_dist.targets[1].transform_space = 'LOCAL_SPACE'
+    v_scaled_dist.targets[1].transform_space = 'WORLD_SPACE'
 
     v_mega_mini_scale = drv_scale_x.variables.new()
     v_mega_mini_scale.type = 'SINGLE_PROP'
@@ -199,7 +199,7 @@ def add_bone_scl_drivers(armature, proxy_actual_bname, proxy_scaled_focus_bname,
     v_scale_y.targets[0].id        = armature
     v_scale_y.targets[0].bone_target        = proxy_actual_bname
     v_scale_y.targets[0].transform_type = 'SCALE_X'
-    v_scale_y.targets[0].transform_space = 'LOCAL_SPACE'
+    v_scale_y.targets[0].transform_space = 'TRANSFORM_SPACE'
     v_scale_y.targets[0].data_path = "scale.x"
     drv_scale_y.expression = v_scale_y.name
     # Z scale is copy of X scale value
@@ -210,7 +210,7 @@ def add_bone_scl_drivers(armature, proxy_actual_bname, proxy_scaled_focus_bname,
     v_scale_z.targets[0].id        = armature
     v_scale_z.targets[0].bone_target        = proxy_actual_bname
     v_scale_z.targets[0].transform_type = 'SCALE_X'
-    v_scale_z.targets[0].transform_space = 'LOCAL_SPACE'
+    v_scale_z.targets[0].transform_space = 'TRANSFORM_SPACE'
     v_scale_z.targets[0].data_path = "scale.x"
     drv_scale_z.expression = v_scale_z.name
 
@@ -423,6 +423,7 @@ class MEGAMINI_AttachRigProxyPair(bpy.types.Operator):
         # debug: change current frame of animation, to force Blender to update the armature, drivers, etc. in the
         # dependency graph - which Blender isn't automatically doing, for some reason...
         # all of this is done avoid errors with locations of objects/bones when parenting objects to bones
+        bpy.context.scene.frame_set(bpy.context.scene.frame_current)
         bpy.context.scene.frame_set(bpy.context.scene.frame_current)
 
         # make the new Actual bone the active bone, to be used for parenting objects
