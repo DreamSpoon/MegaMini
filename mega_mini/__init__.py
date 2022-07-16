@@ -16,9 +16,7 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-
-### TODO: Keyframe initial positions of ScaledProxy - to prevent loss of data when user selects
-#         all bones and press Ctrl-G, Ctrl-R, Ctrl-S, etc.
+# TODO: show current MegaMini rig stats, including bones by way of list box
 
 bl_info = {
     "name": "Mega Mini",
