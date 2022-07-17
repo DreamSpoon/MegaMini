@@ -19,7 +19,8 @@
 import bpy
 import bmesh
 
-def create_mesh_obj_from_pydata(verts=[], faces=[], edges=[], obj_name=None, mesh_name=None, coll_name="Collection"):
+def create_mesh_obj_from_pydata(verts=[], faces=[], edges=[], obj_name=None, mesh_name=None,
+                                collection_name="Collection"):
     if obj_name is None:
         obj_name = "Object"
     if mesh_name is None:
@@ -27,7 +28,7 @@ def create_mesh_obj_from_pydata(verts=[], faces=[], edges=[], obj_name=None, mes
 
     mesh = bpy.data.meshes.new(mesh_name)
     obj = bpy.data.objects.new(obj_name, mesh)
-    col = bpy.data.collections.get(coll_name)
+    col = bpy.data.collections.get(collection_name)
     col.objects.link(obj)
     bpy.context.view_layer.objects.active = obj
     mesh.from_pydata(verts, edges, faces)

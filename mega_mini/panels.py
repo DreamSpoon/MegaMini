@@ -18,7 +18,6 @@
 
 import bpy
 import mathutils
-import bmesh
 
 import math
 
@@ -63,7 +62,7 @@ def add_bconst_scl_influence_driver(armature, scaled_obs_bconst):
 #       and see how things appear without the 'forced perspective' object scaling effect - and compare with
 #       'forced perspective' effect in real-time
 def create_mega_mini_armature(context, mega_mini_scale):
-    tri_widget = create_mege_mini_widgets()
+    tri_widget = create_mege_mini_widgets(context)
 
     old_3dview_mode = context.mode
 
@@ -461,7 +460,23 @@ class MEGAMINI_AttachRigProxyPair(bpy.types.Operator):
 
         return {'FINISHED'}
 
-def create_mege_mini_widgets():
+def get_collection_by_name(root_collection, collection_name):
+    if root_collection.name == collection_name:
+        return root_collection
+
+    for c in root_collection.children:
+        coll = get_collection_by_name(c, collection_name)
+        if coll != None:
+            return coll
+
+def collection_hide_in_viewport(context, collection_name):
+    for v_layer in context.scene.view_layers:
+        coll = get_collection_by_name(v_layer.layer_collection, collection_name)
+        if coll is None:
+            continue
+        coll.hide_viewport = True
+
+def create_mege_mini_widgets(context):
     # if v2.7 or earlier
     if bpy.app.version < (2,80,0):
         tri_obj = create_widget_triangle()
@@ -473,12 +488,19 @@ def create_mege_mini_widgets():
     # else v2.8 or later
     else:
         new_collection = bpy.data.collections.new("MegaMiniHidden")
-        tri_obj = create_widget_triangle(coll_name=new_collection.name)
+        new_collection.hide_render = True
+        # link new collection to currently active collection
+        context.view_layer.active_layer_collection.collection.children.link(new_collection)
+        collection_hide_in_viewport(context, new_collection.name)
+        tri_obj = create_widget_triangle(collection_name=new_collection.name)
 
     return tri_obj
 
-def create_widget_triangle():
+def create_widget_triangle(collection_name=None):
     verts = [(math.sin(math.radians(deg)), math.cos(math.radians(deg)), 0) for deg in [0, 120, 240]]
     faces = [(0, 1, 2)]
-    tri_obj = create_mesh_obj_from_pydata(verts, faces, obj_name="WGT_Tri")
-    return tri_obj
+    if collection_name is None:
+        return create_mesh_obj_from_pydata(verts, faces, obj_name="WGT_Tri")
+    else:
+        return create_mesh_obj_from_pydata(verts, faces, obj_name="WGT_Tri",
+                                           collection_name=collection_name)
