@@ -20,6 +20,8 @@ import bpy
 import mathutils
 import bmesh
 
+import math
+
 if bpy.app.version < (2,80,0):
     from .imp_v27 import create_mesh_obj_from_pydata
 else:
@@ -38,6 +40,9 @@ OBJ_PROP_BONE_SCL_MULT = "mega_mini_bone_scl_mult"
 
 TEMP_BONE_HEAD = (0, 0, 0)
 TEMP_BONE_TAIL = (0, 1, 0)
+
+SHORT_BONE_HEAD = (0, 0, 0)
+SHORT_BONE_TAIL = (0, 0.1, 0)
 
 def add_bconst_scl_influence_driver(armature, scaled_obs_bconst):
     drv_copy_loc = scaled_obs_bconst.driver_add('influence').driver
@@ -58,13 +63,18 @@ def add_bconst_scl_influence_driver(armature, scaled_obs_bconst):
 #       and see how things appear without the 'forced perspective' object scaling effect - and compare with
 #       'forced perspective' effect in real-time
 def create_mega_mini_armature(context, mega_mini_scale):
+    tri_widget = create_mege_mini_widgets()
+
     old_3dview_mode = context.mode
+
     # create MegaMini armature and enter EDIT mode
     bpy.ops.object.armature_add(enter_editmode=True, location=(0, 0, 0))
     armature = context.active_object
     # the armature represents the "actual space", the ScaledWindow bone represents the "scaled space"
     armature.name = RIG_BASENAME
     armature[OBJ_PROP_SCALE] = mega_mini_scale
+    # ensure armature will display custom bone shapes
+    armature.data.show_bone_custom_shapes = True
 
     # modify default bone to make 'Scaled Window' bone, to hold Scaled empties (this is the 'TV remote controller' part)
     scaled_window = armature.data.edit_bones[0]
@@ -76,17 +86,24 @@ def create_mega_mini_armature(context, mega_mini_scale):
     # save bone name for later use (in Pose bones mode, where the edit bones name may not be usable - will cause error)
     scaled_obs_name = scaled_obs.name
     # set bone data
-    scaled_obs.head = mathutils.Vector(TEMP_BONE_HEAD)
-    scaled_obs.tail = mathutils.Vector(TEMP_BONE_TAIL)
+    scaled_obs.head = mathutils.Vector(SHORT_BONE_HEAD)
+    scaled_obs.tail = mathutils.Vector(SHORT_BONE_TAIL)
     scaled_obs.parent = scaled_window
+    # custom bone shape should show as Wireframe
+    scaled_obs.show_wire = True
 
     actual_obs = armature.data.edit_bones.new(name=ACTUAL_OBSERVER_BNAME)
     actual_obs_name = actual_obs.name
     actual_obs.head = mathutils.Vector(TEMP_BONE_HEAD)
     actual_obs.tail = mathutils.Vector(TEMP_BONE_TAIL)
+    # custom bone shape should show as Wireframe
+    actual_obs.show_wire = True
 
     # enter Pose mode to allow adding bone constraints
     bpy.ops.object.mode_set(mode='POSE')
+    # apply custom bone shapes to Sun Target, Sensor, and Blinds (apply to Blinds by way of Diff Cube),
+    armature.pose.bones[scaled_obs_name].custom_shape = bpy.data.objects[tri_widget.name]
+    armature.pose.bones[actual_obs_name].custom_shape = bpy.data.objects[tri_widget.name]
 
     # add bone constraint 'Copy Location' to Scaled Observer, so the Scaled Observer bone can be adjusted (fine-tuned)
     # with the Actual Observer bone (e.g. the Actual Observer bone can be parented to a scene Camera)
@@ -102,6 +119,11 @@ def create_mega_mini_armature(context, mega_mini_scale):
 
     bpy.ops.object.mode_set(mode=old_3dview_mode)
 
+    # parent widgets to new MegaMini Rig
+    tri_widget.parent = armature
+
+    return armature
+
 class MEGAMINI_CreateMegaMiniRig(bpy.types.Operator):
     bl_description = "Create a MegaMini rig, for 'condensed space' - e.g. Solar system simulations, outer-space-to-Earth-surface zoom"
     bl_idname = "mega_mini.create_mega_mini_rig"
@@ -114,9 +136,6 @@ class MEGAMINI_CreateMegaMiniRig(bpy.types.Operator):
             self.report({'ERROR'}, "Error in new Observer scale. Must be above zero.")
             return {'CANCELLED'}
         create_mega_mini_armature(context, mega_mini_scale)
-
-        create_widget_triangle()
-
         return {'FINISHED'}
 
 # "edit bones" must be created at origin (head at origin, ...), so that pose bone locations can be used by drivers
@@ -442,7 +461,24 @@ class MEGAMINI_AttachRigProxyPair(bpy.types.Operator):
 
         return {'FINISHED'}
 
+def create_mege_mini_widgets():
+    # if v2.7 or earlier
+    if bpy.app.version < (2,80,0):
+        tri_obj = create_widget_triangle()
+        tri_obj.draw_type = 'WIRE'
+        # widgets are only in final layer
+        tri_obj.layers[19] = True
+        for i in range(19):
+            tri_obj.layers[i] = False
+    # else v2.8 or later
+    else:
+        new_collection = bpy.data.collections.new("MegaMiniHidden")
+        tri_obj = create_widget_triangle(coll_name=new_collection.name)
+
+    return tri_obj
+
 def create_widget_triangle():
-    verts = [(0, 0, 0), (1, 0, 0), (0, 1, 0)]
+    verts = [(math.sin(math.radians(deg)), math.cos(math.radians(deg)), 0) for deg in [0, 120, 240]]
     faces = [(0, 1, 2)]
-    create_mesh_obj_from_pydata(verts, faces)
+    tri_obj = create_mesh_obj_from_pydata(verts, faces, obj_name="WGT_Tri")
+    return tri_obj

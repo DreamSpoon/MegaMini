@@ -19,13 +19,11 @@
 import bpy
 import bmesh
 
-def create_mesh_obj_from_pydata(verts, faces, edges=None, obj_name=None, mesh_name=None):
+def create_mesh_obj_from_pydata(verts=[], faces=[], edges=[], obj_name=None, mesh_name=None):
     if obj_name is None:
         obj_name = "Object"
     if mesh_name is None:
         mesh_name = obj_name
-    if edges is None:
-        edges = []
 
     mesh = bpy.data.meshes.new(mesh_name)
     obj = bpy.data.objects.new(obj_name, mesh)
@@ -40,9 +38,12 @@ def create_mesh_obj_from_pydata(verts, faces, edges=None, obj_name=None, mesh_na
         new_v = bm.verts.new(v)
         verts_list.append(new_v)
     for e in edges:
-        bm.edges.new(e)
+        edge_verts = [verts_list[v_index] for v_index in e]
+        bm.edges.new(edge_verts)
     for f in faces:
         face_verts = [verts_list[v_index] for v_index in f]
         bm.faces.new(face_verts)
     bm.to_mesh(mesh)
     bm.free()
+
+    return obj
