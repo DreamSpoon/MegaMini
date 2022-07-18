@@ -27,104 +27,111 @@ else:
     from .imp_v28 import create_mesh_obj_from_pydata
 
 RIG_BASENAME = "MegaMini"
-SCALED_WINDOW_BNAME = "ProxyField"
-SCALED_OBSERVER_BNAME = "ProxyObserver"
-ACTUAL_OBSERVER_BNAME = "Observer"
-PROXY_SCALED_BNAME = "ProxyPlace"
-PROXY_ACTUAL_BNAME = "Place"
-PROXY_SCALED_FOCUS_BNAME = "ProxyPlaceFocus"
+PROXY_FIELD_BNAME = "ProxyField"
+PROXY_OBSERVER_BNAME = "ProxyObserver"
+OBSERVER_BNAME = "Observer"
+PROXY_PLACE_BNAME = "ProxyPlace"
+PLACE_BNAME = "Place"
+PROXY_PLACE_FOCUS_BNAME = "ProxyPlaceFocus"
 
 OBJ_PROP_SCALE = "mega_mini_scale"
 OBJ_PROP_BONE_SCL_MULT = "mega_mini_bone_scl_mult"
 
-TEMP_BONE_HEAD = (0, 0, 0)
-TEMP_BONE_TAIL = (0, 1, 0)
+REGULAR_BONE_HEAD = (0, 0, 0)
+REGULAR_BONE_TAIL = (0, 1, 0)
 
 SHORT_BONE_HEAD = (0, 0, 0)
 SHORT_BONE_TAIL = (0, 0.1, 0)
 
-def add_bconst_scl_influence_driver(armature, scaled_obs_bconst):
-    drv_copy_loc = scaled_obs_bconst.driver_add('influence').driver
+TRI_WIDGET_NAME = "WidgetTriangle"
+
+def add_bconst_scl_influence_driver(mega_mini_rig, proxy_obs_bconst):
+    drv_copy_loc = proxy_obs_bconst.driver_add('influence').driver
 
     v_mega_mini_scale = drv_copy_loc.variables.new()
     v_mega_mini_scale.type = 'SINGLE_PROP'
     v_mega_mini_scale.name                 = "mega_mini_scl"
-    v_mega_mini_scale.targets[0].id        = armature
+    v_mega_mini_scale.targets[0].id        = mega_mini_rig
     v_mega_mini_scale.targets[0].data_path = "[\""+OBJ_PROP_SCALE+"\"]"
 
     drv_copy_loc.expression = "1 / " + v_mega_mini_scale.name
 
 # Notes:
-#     - 'Actual Window' is the armature itself, 'Scaled Window' is intended to be like a 'TV remote controller',
-#       easy to pick up and move around in the scene, without modifying the positions of objects
-#     - 'Scaled Window' is a Scaled Remote Controller for an Actual World of objects
-#     - 'Scaled Window' can be scaled up (scaled up object scale values, not MegaMini scale) to get 1:1 scale factor,
-#       and see how things appear without the 'forced perspective' object scaling effect - and compare with
-#       'forced perspective' effect in real-time
+#     - 'Field' is the mega_mini_rig itself, 'ProxyField' is intended to be like a 'TV remote controller',
+#       easy to pick up and move around in the scene, without modifying the positions of objects in the rig
+#     - 'ProxyField' is a Scaled Remote Controller for an Actual World of objects
 def create_mega_mini_armature(context, mega_mini_scale):
-    tri_widget = create_mege_mini_widgets(context)
+    widget_objs = create_mege_mini_widgets(context)
 
     old_3dview_mode = context.mode
 
-    # create MegaMini armature and enter EDIT mode
+    # create MegaMini mega_mini_rig and enter EDIT mode
     bpy.ops.object.armature_add(enter_editmode=True, location=(0, 0, 0))
-    armature = context.active_object
-    # the armature represents the "actual space", the ScaledWindow bone represents the "scaled space"
-    armature.name = RIG_BASENAME
-    armature[OBJ_PROP_SCALE] = mega_mini_scale
-    # ensure armature will display custom bone shapes
-    armature.data.show_bone_custom_shapes = True
+    mega_mini_rig = context.active_object
+    # the mega_mini_rig represents the "actual space", the ProxyField bone represents the "scaled space"
+    mega_mini_rig.name = RIG_BASENAME
+    mega_mini_rig[OBJ_PROP_SCALE] = mega_mini_scale
+    # ensure mega_mini_rig will display custom bone shapes
+    mega_mini_rig.data.show_bone_custom_shapes = True
+    # modify default bone to make ProxyField bone, to hold proxies for observer(s) and actual place(s)
+    b_proxy_field = mega_mini_rig.data.edit_bones[0]
+    b_proxy_field.head = mathutils.Vector(REGULAR_BONE_HEAD)
+    b_proxy_field.tail = mathutils.Vector(REGULAR_BONE_TAIL)
+    b_proxy_field.name = PROXY_FIELD_BNAME
 
-    # modify default bone to make 'Scaled Window' bone, to hold Scaled empties (this is the 'TV remote controller' part)
-    scaled_window = armature.data.edit_bones[0]
-    scaled_window.head = mathutils.Vector(TEMP_BONE_HEAD)
-    scaled_window.tail = mathutils.Vector(TEMP_BONE_TAIL)
-    scaled_window.name = SCALED_WINDOW_BNAME
-
-    scaled_obs = armature.data.edit_bones.new(name=SCALED_OBSERVER_BNAME)
+    b_proxy_observer = mega_mini_rig.data.edit_bones.new(name=PROXY_OBSERVER_BNAME)
     # save bone name for later use (in Pose bones mode, where the edit bones name may not be usable - will cause error)
-    scaled_obs_name = scaled_obs.name
+    proxy_observer_bname = b_proxy_observer.name
     # set bone data
-    scaled_obs.head = mathutils.Vector(SHORT_BONE_HEAD)
-    scaled_obs.tail = mathutils.Vector(SHORT_BONE_TAIL)
-    scaled_obs.parent = scaled_window
+    b_proxy_observer.head = mathutils.Vector(SHORT_BONE_HEAD)
+    b_proxy_observer.tail = mathutils.Vector(SHORT_BONE_TAIL)
+    b_proxy_observer.parent = b_proxy_field
     # custom bone shape should show as Wireframe
-    scaled_obs.show_wire = True
+    b_proxy_observer.show_wire = True
 
-    actual_obs = armature.data.edit_bones.new(name=ACTUAL_OBSERVER_BNAME)
-    actual_obs_name = actual_obs.name
-    actual_obs.head = mathutils.Vector(TEMP_BONE_HEAD)
-    actual_obs.tail = mathutils.Vector(TEMP_BONE_TAIL)
+    b_observer = mega_mini_rig.data.edit_bones.new(name=OBSERVER_BNAME)
+    observer_bname = b_observer.name
+    b_observer.head = mathutils.Vector(REGULAR_BONE_HEAD)
+    b_observer.tail = mathutils.Vector(REGULAR_BONE_TAIL)
     # custom bone shape should show as Wireframe
-    actual_obs.show_wire = True
+    b_observer.show_wire = True
 
     # enter Pose mode to allow adding bone constraints
     bpy.ops.object.mode_set(mode='POSE')
     # apply custom bone shapes to Sun Target, Sensor, and Blinds (apply to Blinds by way of Diff Cube),
-    armature.pose.bones[scaled_obs_name].custom_shape = bpy.data.objects[tri_widget.name]
-    armature.pose.bones[actual_obs_name].custom_shape = bpy.data.objects[tri_widget.name]
-
-    # add bone constraint 'Copy Location' to Scaled Observer, so the Scaled Observer bone can be adjusted (fine-tuned)
-    # with the Actual Observer bone (e.g. the Actual Observer bone can be parented to a scene Camera)
-    scaled_obs_bconst = armature.pose.bones[scaled_obs_name].constraints.new(type='COPY_LOCATION')
-    scaled_obs_bconst.target = armature
-    scaled_obs_bconst.subtarget = actual_obs_name
-    scaled_obs_bconst.use_offset = True
+    mega_mini_rig.pose.bones[proxy_observer_bname].custom_shape = bpy.data.objects[widget_objs[TRI_WIDGET_NAME].name]
+    mega_mini_rig.pose.bones[observer_bname].custom_shape = bpy.data.objects[widget_objs[TRI_WIDGET_NAME].name]
+    # add bone constraint 'Copy Location' to ProxyObserver, so ProxyObserver bone can be adjusted (fine-tuned) with
+    # Observer bone, e.g. parent Observer bone to scene Camera, so forced perspective always looks correct to Camera
+    proxy_obs_bconst = mega_mini_rig.pose.bones[proxy_observer_bname].constraints.new(type='COPY_LOCATION')
+    proxy_obs_bconst.target = mega_mini_rig
+    proxy_obs_bconst.subtarget = observer_bname
+    proxy_obs_bconst.use_offset = True
     # change space types to LOCAL, to prevent problems if MegaMini rig is moved
-    scaled_obs_bconst.target_space = 'LOCAL'
-    scaled_obs_bconst.owner_space = 'LOCAL'
-    # add a driver to scale the influence by the armature's mega_mini_scale value
-    add_bconst_scl_influence_driver(armature, scaled_obs_bconst)
+    proxy_obs_bconst.target_space = 'LOCAL'
+    proxy_obs_bconst.owner_space = 'LOCAL'
+    # add a driver to scale the influence by the mega_mini_rig's mega_mini_scale value
+    add_bconst_scl_influence_driver(mega_mini_rig, proxy_obs_bconst)
 
     bpy.ops.object.mode_set(mode=old_3dview_mode)
 
-    # parent widgets to new MegaMini Rig
-    tri_widget.parent = armature
+    # parent widgets to new MegaMini Rig, first widget is "main parent" widget to other widgets
+    if len(widget_objs) > 0:
+        main_parent = None
+        for w in widget_objs.values():
+            if main_parent is None:
+                # parent first widget to rig
+                main_parent = w
+                main_parent.parent = mega_mini_rig
+                continue
+            # parent remaining widgets to first widget
+            w.parent = main_parent
 
-    return armature
+    return mega_mini_rig
 
 class MEGAMINI_CreateMegaMiniRig(bpy.types.Operator):
-    bl_description = "Create a MegaMini rig, for 'condensed space' - e.g. Solar system simulations, outer-space-to-Earth-surface zoom"
+    bl_description = "Create a MegaMini rig, for 'condensed space' - e.g. Solar system simulations, " + \
+        "outer-space-to-Earth-surface zoom"
     bl_idname = "mega_mini.create_mega_mini_rig"
     bl_label = "Create MegaMini Rig"
     bl_options = {'REGISTER', 'UNDO'}
@@ -139,67 +146,67 @@ class MEGAMINI_CreateMegaMiniRig(bpy.types.Operator):
 
 # "edit bones" must be created at origin (head at origin, ...), so that pose bone locations can be used by drivers
 # to perform offsets, distance calculations, etc.
-def create_proxy_bone_pair(context, armature, use_obs_loc):
-    # save old view3d mode and enter Edit mode, to add bones to armature
+def create_proxy_bone_pair(context, mega_mini_rig, use_obs_loc):
+    # save old view3d mode and enter Edit mode, to add bones to mega_mini_rig
     old_3dview_mode = context.mode
 
     bpy.ops.object.mode_set(mode='EDIT')
 
-    proxy_actual_bone = armature.data.edit_bones.new(name=PROXY_ACTUAL_BNAME)
-    proxy_actual_bname = proxy_actual_bone.name
-    proxy_actual_bone.head = mathutils.Vector(TEMP_BONE_HEAD)
-    proxy_actual_bone.tail = mathutils.Vector(TEMP_BONE_TAIL)
-    proxy_actual_bone.parent = armature.data.edit_bones[ACTUAL_OBSERVER_BNAME]
+    b_place = mega_mini_rig.data.edit_bones.new(name=PLACE_BNAME)
+    place_bname = b_place.name
+    b_place.head = mathutils.Vector(REGULAR_BONE_HEAD)
+    b_place.tail = mathutils.Vector(REGULAR_BONE_TAIL)
+    b_place.parent = mega_mini_rig.data.edit_bones[OBSERVER_BNAME]
 
-    proxy_scaled_bone = armature.data.edit_bones.new(name=PROXY_SCALED_BNAME)
-    proxy_scaled_bname = proxy_scaled_bone.name
-    proxy_scaled_bone.head = mathutils.Vector(TEMP_BONE_HEAD)
-    proxy_scaled_bone.tail = mathutils.Vector(TEMP_BONE_TAIL)
-    proxy_scaled_bone.parent = armature.data.edit_bones[SCALED_WINDOW_BNAME]
+    b_proxy_place = mega_mini_rig.data.edit_bones.new(name=PROXY_PLACE_BNAME)
+    proxy_place_bname = b_proxy_place.name
+    b_proxy_place.head = mathutils.Vector(REGULAR_BONE_HEAD)
+    b_proxy_place.tail = mathutils.Vector(REGULAR_BONE_TAIL)
+    b_proxy_place.parent = mega_mini_rig.data.edit_bones[PROXY_FIELD_BNAME]
 
-    proxy_scaled_focus_bone = armature.data.edit_bones.new(name=PROXY_SCALED_FOCUS_BNAME)
-    proxy_scaled_focus_bname = proxy_scaled_focus_bone.name
-    proxy_scaled_focus_bone.head = mathutils.Vector(TEMP_BONE_HEAD)
-    proxy_scaled_focus_bone.tail = mathutils.Vector(TEMP_BONE_TAIL)
-    proxy_scaled_focus_bone.parent = proxy_scaled_bone
+    b_proxy_place_focus = mega_mini_rig.data.edit_bones.new(name=PROXY_PLACE_FOCUS_BNAME)
+    proxy_place_focus_bname = b_proxy_place_focus.name
+    b_proxy_place_focus.head = mathutils.Vector(REGULAR_BONE_HEAD)
+    b_proxy_place_focus.tail = mathutils.Vector(REGULAR_BONE_TAIL)
+    b_proxy_place_focus.parent = b_proxy_place
 
     # switch to Pose mode to allow adding drivers, and to set pose bone location(s)
     bpy.ops.object.mode_set(mode='POSE')
 
     # add driver to actual bone to make it scale with scaled bone
-    add_bone_scl_drivers(armature, proxy_actual_bname, proxy_scaled_focus_bname, SCALED_OBSERVER_BNAME)
-    add_bone_loc_drivers(armature, proxy_actual_bname, proxy_scaled_bname, SCALED_OBSERVER_BNAME)
-    add_bone_rot_drivers(armature, proxy_actual_bname, proxy_scaled_bname)
+    add_bone_scl_drivers(mega_mini_rig, place_bname, proxy_place_focus_bname, PROXY_OBSERVER_BNAME)
+    add_bone_loc_drivers(mega_mini_rig, place_bname, proxy_place_bname, PROXY_OBSERVER_BNAME)
+    add_bone_rot_drivers(mega_mini_rig, place_bname, proxy_place_bname)
 
     # if new scaled bone should use the scaled observer position, then do it
     if use_obs_loc:
         # get position of Scaled observer, with it's "Copy Location" constraint included, by using "matrix"
-        armature.pose.bones[proxy_scaled_bname].location = (armature.pose.bones[SCALED_OBSERVER_BNAME].matrix[0][3],
-                                                            armature.pose.bones[SCALED_OBSERVER_BNAME].matrix[1][3],
-                                                            armature.pose.bones[SCALED_OBSERVER_BNAME].matrix[2][3])
+        mega_mini_rig.pose.bones[proxy_place_bname].location = (mega_mini_rig.pose.bones[PROXY_OBSERVER_BNAME].matrix[0][3],
+                                                            mega_mini_rig.pose.bones[PROXY_OBSERVER_BNAME].matrix[1][3],
+                                                            mega_mini_rig.pose.bones[PROXY_OBSERVER_BNAME].matrix[2][3])
         # insert keyframe, to prevent data loss, i.e. position erased, if user does menu Pose -> Clear Transform,
         # presses Ctrl-G to reset location, etc.
-        armature.pose.bones[proxy_scaled_bname].keyframe_insert(data_path="location")
+        mega_mini_rig.pose.bones[proxy_place_bname].keyframe_insert(data_path="location")
 
-    armature.pose.bones[proxy_actual_bname][OBJ_PROP_BONE_SCL_MULT] = 1.0
+    mega_mini_rig.pose.bones[place_bname][OBJ_PROP_BONE_SCL_MULT] = 1.0
 
     # switch back to previous view3d mode
     bpy.ops.object.mode_set(mode=old_3dview_mode)
 
-    return proxy_actual_bname, proxy_scaled_bname
+    return place_bname, proxy_place_bname
 
-def add_bone_scl_drivers(armature, proxy_actual_bname, proxy_scaled_focus_bname, s_obs_bname):
-    drv_scale_x = armature.pose.bones[proxy_actual_bname].driver_add("scale", 0).driver
+def add_bone_scl_drivers(armature, place_bname, proxy_place_focus_bname, proxy_observer_bname):
+    drv_scale_x = armature.pose.bones[place_bname].driver_add("scale", 0).driver
 
-    v_scaled_dist = drv_scale_x.variables.new()
-    v_scaled_dist.type = 'LOC_DIFF'
-    v_scaled_dist.name                 = "scaled_dist"
-    v_scaled_dist.targets[0].id        = armature
-    v_scaled_dist.targets[0].bone_target        = proxy_scaled_focus_bname
-    v_scaled_dist.targets[0].transform_space = 'WORLD_SPACE'
-    v_scaled_dist.targets[1].id        = armature
-    v_scaled_dist.targets[1].bone_target        = s_obs_bname
-    v_scaled_dist.targets[1].transform_space = 'WORLD_SPACE'
+    v_proxy_dist = drv_scale_x.variables.new()
+    v_proxy_dist.type = 'LOC_DIFF'
+    v_proxy_dist.name                 = "proxy_dist"
+    v_proxy_dist.targets[0].id        = armature
+    v_proxy_dist.targets[0].bone_target        = proxy_place_focus_bname
+    v_proxy_dist.targets[0].transform_space = 'WORLD_SPACE'
+    v_proxy_dist.targets[1].id        = armature
+    v_proxy_dist.targets[1].bone_target        = proxy_observer_bname
+    v_proxy_dist.targets[1].transform_space = 'WORLD_SPACE'
 
     v_mega_mini_scale = drv_scale_x.variables.new()
     v_mega_mini_scale.type = 'SINGLE_PROP'
@@ -211,63 +218,63 @@ def add_bone_scl_drivers(armature, proxy_actual_bname, proxy_scaled_focus_bname,
     v_self_bone_scale.type = 'SINGLE_PROP'
     v_self_bone_scale.name                 = "self_bone_scale"
     v_self_bone_scale.targets[0].id        = armature
-    v_self_bone_scale.targets[0].data_path = "pose.bones[\""+proxy_actual_bname+"\"][\""+OBJ_PROP_BONE_SCL_MULT+"\"]"
+    v_self_bone_scale.targets[0].data_path = "pose.bones[\""+place_bname+"\"][\""+OBJ_PROP_BONE_SCL_MULT+"\"]"
 
     # Actual's forced perspective scaling value equals
     #     1 over square root of
     #         1 plus actual distance (un-scaled distance) from Scaled Observer to Scaled Focus
-    drv_scale_x.expression = "1 / sqrt(1 + "+v_mega_mini_scale.name+" * "+v_scaled_dist.name+") * "+v_self_bone_scale.name
+    drv_scale_x.expression = v_self_bone_scale.name+" / sqrt(1 + "+v_mega_mini_scale.name+" * "+v_proxy_dist.name+")"
 
     # Y scale is copy of X scale value
-    drv_scale_y = armature.pose.bones[proxy_actual_bname].driver_add('scale', 1).driver
+    drv_scale_y = armature.pose.bones[place_bname].driver_add('scale', 1).driver
     v_scale_y = drv_scale_y.variables.new()
     v_scale_y.type = 'TRANSFORMS'
     v_scale_y.name                 = "self_scl_x"
     v_scale_y.targets[0].id        = armature
-    v_scale_y.targets[0].bone_target        = proxy_actual_bname
+    v_scale_y.targets[0].bone_target        = place_bname
     v_scale_y.targets[0].transform_type = 'SCALE_X'
     v_scale_y.targets[0].transform_space = 'TRANSFORM_SPACE'
     v_scale_y.targets[0].data_path = "scale.x"
     drv_scale_y.expression = v_scale_y.name
     # Z scale is copy of X scale value
-    drv_scale_z = armature.pose.bones[proxy_actual_bname].driver_add('scale', 2).driver
+    drv_scale_z = armature.pose.bones[place_bname].driver_add('scale', 2).driver
     v_scale_z = drv_scale_z.variables.new()
     v_scale_z.type = 'TRANSFORMS'
     v_scale_z.name                 = "self_scl_x"
     v_scale_z.targets[0].id        = armature
-    v_scale_z.targets[0].bone_target        = proxy_actual_bname
+    v_scale_z.targets[0].bone_target        = place_bname
     v_scale_z.targets[0].transform_type = 'SCALE_X'
     v_scale_z.targets[0].transform_space = 'TRANSFORM_SPACE'
     v_scale_z.targets[0].data_path = "scale.x"
     drv_scale_z.expression = v_scale_z.name
 
-def add_bone_loc_drivers(armature, proxy_actual_bname, proxy_scaled_bname, s_obs_bname):
+def add_bone_loc_drivers(armature, place_bname, proxy_place_bname, proxy_observer_bname):
     # X
-    drv_loc_x = armature.pose.bones[proxy_actual_bname].driver_add('location', 0).driver
-    # proxy scaled X
-    v_proxy_scaled_x = drv_loc_x.variables.new()
-    v_proxy_scaled_x.type = 'TRANSFORMS'
-    v_proxy_scaled_x.name                 = "proxy_scaled_x"
-    v_proxy_scaled_x.targets[0].id        = armature
-    v_proxy_scaled_x.targets[0].bone_target        = proxy_scaled_bname
-    v_proxy_scaled_x.targets[0].transform_type = 'LOC_X'
-    v_proxy_scaled_x.targets[0].transform_space = 'LOCAL_SPACE'
-    v_proxy_scaled_x.targets[0].data_path = "location.x"
-    # scaled observer X
-    v_scaled_obs_x = drv_loc_x.variables.new()
-    v_scaled_obs_x.type = 'TRANSFORMS'
-    v_scaled_obs_x.name                 = "scaled_obs_x"
-    v_scaled_obs_x.targets[0].id        = armature
-    v_scaled_obs_x.targets[0].bone_target        = s_obs_bname
-    v_scaled_obs_x.targets[0].transform_type = 'LOC_X'
-    v_scaled_obs_x.targets[0].transform_space = 'LOCAL_SPACE'
-    v_scaled_obs_x.targets[0].data_path = "location.x"
+    drv_loc_x = armature.pose.bones[place_bname].driver_add('location', 0).driver
+    # proxy place X
+    v_proxy_place_x = drv_loc_x.variables.new()
+    v_proxy_place_x.type = 'TRANSFORMS'
+    v_proxy_place_x.name                 = "proxy_place_x"
+    v_proxy_place_x.targets[0].id        = armature
+    v_proxy_place_x.targets[0].bone_target        = proxy_place_bname
+    v_proxy_place_x.targets[0].transform_type = 'LOC_X'
+    v_proxy_place_x.targets[0].transform_space = 'LOCAL_SPACE'
+    v_proxy_place_x.targets[0].data_path = "location.x"
+    # proxy observer X
+    v_proxy_obs_x = drv_loc_x.variables.new()
+    v_proxy_obs_x.type = 'TRANSFORMS'
+    v_proxy_obs_x.name                 = "proxy_obs_x"
+    v_proxy_obs_x.targets[0].id        = armature
+    v_proxy_obs_x.targets[0].bone_target        = proxy_observer_bname
+    v_proxy_obs_x.targets[0].transform_type = 'LOC_X'
+    v_proxy_obs_x.targets[0].transform_space = 'LOCAL_SPACE'
+    v_proxy_obs_x.targets[0].data_path = "location.x"
     # bone self scale X
     v_bone_scale_x = drv_loc_x.variables.new()
     v_bone_scale_x.type = 'TRANSFORMS'
-    v_bone_scale_x.name                 = "bone_scale_x"
+    v_bone_scale_x.name                 = "place_x"
     v_bone_scale_x.targets[0].id        = armature
-    v_bone_scale_x.targets[0].bone_target        = proxy_actual_bname
+    v_bone_scale_x.targets[0].bone_target        = place_bname
     v_bone_scale_x.targets[0].transform_type = 'SCALE_X'
     v_bone_scale_x.targets[0].transform_space = 'LOCAL_SPACE'
     v_bone_scale_x.targets[0].data_path = "location.x"
@@ -278,35 +285,35 @@ def add_bone_loc_drivers(armature, proxy_actual_bname, proxy_scaled_bname, s_obs
     v_mega_mini_scale_x.targets[0].id        = armature
     v_mega_mini_scale_x.targets[0].data_path = "[\""+OBJ_PROP_SCALE+"\"]"
     # driver X
-    drv_loc_x.expression = "("+v_proxy_scaled_x.name+" - "+v_scaled_obs_x.name+") * "+v_mega_mini_scale_x.name+" * "+\
+    drv_loc_x.expression = "("+v_proxy_place_x.name+" - "+v_proxy_obs_x.name+") * "+v_mega_mini_scale_x.name+" * "+\
         v_bone_scale_x.name
 
     # Y
-    drv_loc_y = armature.pose.bones[proxy_actual_bname].driver_add('location', 1).driver
-    # proxy scaled Y
-    v_proxy_scaled_y = drv_loc_y.variables.new()
-    v_proxy_scaled_y.type = 'TRANSFORMS'
-    v_proxy_scaled_y.name                 = "proxy_scaled_y"
-    v_proxy_scaled_y.targets[0].id        = armature
-    v_proxy_scaled_y.targets[0].bone_target        = proxy_scaled_bname
-    v_proxy_scaled_y.targets[0].transform_type = 'LOC_Y'
-    v_proxy_scaled_y.targets[0].transform_space = 'LOCAL_SPACE'
-    v_proxy_scaled_y.targets[0].data_path = "location.y"
-    # scaled observer Y
-    v_scaled_obs_y = drv_loc_y.variables.new()
-    v_scaled_obs_y.type = 'TRANSFORMS'
-    v_scaled_obs_y.name                 = "scaled_obs_y"
-    v_scaled_obs_y.targets[0].id        = armature
-    v_scaled_obs_y.targets[0].bone_target        = s_obs_bname
-    v_scaled_obs_y.targets[0].transform_type = 'LOC_Y'
-    v_scaled_obs_y.targets[0].transform_space = 'LOCAL_SPACE'
-    v_scaled_obs_y.targets[0].data_path = "location.y"
+    drv_loc_y = armature.pose.bones[place_bname].driver_add('location', 1).driver
+    # proxy place Y
+    v_proxy_place_y = drv_loc_y.variables.new()
+    v_proxy_place_y.type = 'TRANSFORMS'
+    v_proxy_place_y.name                 = "proxy_place_y"
+    v_proxy_place_y.targets[0].id        = armature
+    v_proxy_place_y.targets[0].bone_target        = proxy_place_bname
+    v_proxy_place_y.targets[0].transform_type = 'LOC_Y'
+    v_proxy_place_y.targets[0].transform_space = 'LOCAL_SPACE'
+    v_proxy_place_y.targets[0].data_path = "location.y"
+    # proxy observer Y
+    v_proxy_obs_y = drv_loc_y.variables.new()
+    v_proxy_obs_y.type = 'TRANSFORMS'
+    v_proxy_obs_y.name                 = "proxy_obs_y"
+    v_proxy_obs_y.targets[0].id        = armature
+    v_proxy_obs_y.targets[0].bone_target        = proxy_observer_bname
+    v_proxy_obs_y.targets[0].transform_type = 'LOC_Y'
+    v_proxy_obs_y.targets[0].transform_space = 'LOCAL_SPACE'
+    v_proxy_obs_y.targets[0].data_path = "location.y"
     # bone self scale Y
     v_bone_scale_y = drv_loc_y.variables.new()
     v_bone_scale_y.type = 'TRANSFORMS'
-    v_bone_scale_y.name                 = "bone_scale_y"
+    v_bone_scale_y.name                 = "place_y"
     v_bone_scale_y.targets[0].id        = armature
-    v_bone_scale_y.targets[0].bone_target        = proxy_actual_bname
+    v_bone_scale_y.targets[0].bone_target        = place_bname
     v_bone_scale_y.targets[0].transform_type = 'SCALE_Y'
     v_bone_scale_y.targets[0].transform_space = 'LOCAL_SPACE'
     v_bone_scale_y.targets[0].data_path = "location.y"
@@ -317,35 +324,35 @@ def add_bone_loc_drivers(armature, proxy_actual_bname, proxy_scaled_bname, s_obs
     v_mega_mini_scale_y.targets[0].id        = armature
     v_mega_mini_scale_y.targets[0].data_path = "[\""+OBJ_PROP_SCALE+"\"]"
     # driver Y
-    drv_loc_y.expression = "("+v_proxy_scaled_y.name+" - "+v_scaled_obs_y.name+") * "+v_mega_mini_scale_y.name+" * "+\
+    drv_loc_y.expression = "("+v_proxy_place_y.name+" - "+v_proxy_obs_y.name+") * "+v_mega_mini_scale_y.name+" * "+\
         v_bone_scale_y.name
 
     # Z
-    drv_loc_z = armature.pose.bones[proxy_actual_bname].driver_add('location', 2).driver
-    # proxy scaled Z
-    v_proxy_scaled_z = drv_loc_z.variables.new()
-    v_proxy_scaled_z.type = 'TRANSFORMS'
-    v_proxy_scaled_z.name                 = "proxy_scaled_z"
-    v_proxy_scaled_z.targets[0].id        = armature
-    v_proxy_scaled_z.targets[0].bone_target        = proxy_scaled_bname
-    v_proxy_scaled_z.targets[0].transform_type = 'LOC_Z'
-    v_proxy_scaled_z.targets[0].transform_space = 'LOCAL_SPACE'
-    v_proxy_scaled_z.targets[0].data_path = "location.z"
-    # scaled observer Z
-    v_scaled_obs_z = drv_loc_z.variables.new()
-    v_scaled_obs_z.type = 'TRANSFORMS'
-    v_scaled_obs_z.name                 = "scaled_obs_z"
-    v_scaled_obs_z.targets[0].id        = armature
-    v_scaled_obs_z.targets[0].bone_target        = s_obs_bname
-    v_scaled_obs_z.targets[0].transform_type = 'LOC_Z'
-    v_scaled_obs_z.targets[0].transform_space = 'LOCAL_SPACE'
-    v_scaled_obs_z.targets[0].data_path = "location.z"
+    drv_loc_z = armature.pose.bones[place_bname].driver_add('location', 2).driver
+    # proxy place Z
+    v_proxy_place_z = drv_loc_z.variables.new()
+    v_proxy_place_z.type = 'TRANSFORMS'
+    v_proxy_place_z.name                 = "proxy_place_z"
+    v_proxy_place_z.targets[0].id        = armature
+    v_proxy_place_z.targets[0].bone_target        = proxy_place_bname
+    v_proxy_place_z.targets[0].transform_type = 'LOC_Z'
+    v_proxy_place_z.targets[0].transform_space = 'LOCAL_SPACE'
+    v_proxy_place_z.targets[0].data_path = "location.z"
+    # proxy observer Z
+    v_proxy_obs_z = drv_loc_z.variables.new()
+    v_proxy_obs_z.type = 'TRANSFORMS'
+    v_proxy_obs_z.name                 = "proxy_obs_z"
+    v_proxy_obs_z.targets[0].id        = armature
+    v_proxy_obs_z.targets[0].bone_target        = proxy_observer_bname
+    v_proxy_obs_z.targets[0].transform_type = 'LOC_Z'
+    v_proxy_obs_z.targets[0].transform_space = 'LOCAL_SPACE'
+    v_proxy_obs_z.targets[0].data_path = "location.z"
     # bone self scale Z
     v_bone_scale_z = drv_loc_z.variables.new()
     v_bone_scale_z.type = 'TRANSFORMS'
-    v_bone_scale_z.name                 = "bone_scale_z"
+    v_bone_scale_z.name                 = "place_z"
     v_bone_scale_z.targets[0].id        = armature
-    v_bone_scale_z.targets[0].bone_target        = proxy_actual_bname
+    v_bone_scale_z.targets[0].bone_target        = place_bname
     v_bone_scale_z.targets[0].transform_type = 'SCALE_Z'
     v_bone_scale_z.targets[0].transform_space = 'LOCAL_SPACE'
     v_bone_scale_z.targets[0].data_path = "location.z"
@@ -356,41 +363,41 @@ def add_bone_loc_drivers(armature, proxy_actual_bname, proxy_scaled_bname, s_obs
     v_mega_mini_scale_z.targets[0].id        = armature
     v_mega_mini_scale_z.targets[0].data_path = "[\""+OBJ_PROP_SCALE+"\"]"
     # driver Z
-    drv_loc_z.expression = "("+v_proxy_scaled_z.name+" - "+v_scaled_obs_z.name+") * "+v_mega_mini_scale_z.name+" * "+\
+    drv_loc_z.expression = "("+v_proxy_place_z.name+" - "+v_proxy_obs_z.name+") * "+v_mega_mini_scale_z.name+" * "+\
         v_bone_scale_z.name
 
-def add_bone_rot_drivers(armature, proxy_actual_bname, proxy_scaled_bname):
+def add_bone_rot_drivers(armature, place_bname, proxy_place_bname):
     # ensure pose bone uses Euler rotation, because Euler is only rotation mode available due to Drivers usage
-    armature.pose.bones[proxy_actual_bname].rotation_mode = 'XYZ'
+    armature.pose.bones[place_bname].rotation_mode = 'XYZ'
     # X
-    drv_rot_x = armature.pose.bones[proxy_actual_bname].driver_add('rotation_euler', 0).driver
+    drv_rot_x = armature.pose.bones[place_bname].driver_add('rotation_euler', 0).driver
     v_rot_x = drv_rot_x.variables.new()
     v_rot_x.type = 'TRANSFORMS'
-    v_rot_x.name                 = "scaled_rot_x"
+    v_rot_x.name                 = "proxy_rot_x"
     v_rot_x.targets[0].id        = armature
-    v_rot_x.targets[0].bone_target        = proxy_scaled_bname
+    v_rot_x.targets[0].bone_target        = proxy_place_bname
     v_rot_x.targets[0].transform_type = 'ROT_X'
     v_rot_x.targets[0].transform_space = 'LOCAL_SPACE'
     v_rot_x.targets[0].data_path = "rotation_euler.x"
     drv_rot_x.expression = v_rot_x.name
     # Y
-    drv_rot_y = armature.pose.bones[proxy_actual_bname].driver_add('rotation_euler', 1).driver
+    drv_rot_y = armature.pose.bones[place_bname].driver_add('rotation_euler', 1).driver
     v_rot_y = drv_rot_y.variables.new()
     v_rot_y.type = 'TRANSFORMS'
-    v_rot_y.name                 = "scaled_rot_y"
+    v_rot_y.name                 = "proxy_rot_y"
     v_rot_y.targets[0].id        = armature
-    v_rot_y.targets[0].bone_target        = proxy_scaled_bname
+    v_rot_y.targets[0].bone_target        = proxy_place_bname
     v_rot_y.targets[0].transform_type = 'ROT_Y'
     v_rot_y.targets[0].transform_space = 'LOCAL_SPACE'
     v_rot_y.targets[0].data_path = "rotation_euler.y"
     drv_rot_y.expression = v_rot_y.name
     # Z
-    drv_rot_z = armature.pose.bones[proxy_actual_bname].driver_add('rotation_euler', 2).driver
+    drv_rot_z = armature.pose.bones[place_bname].driver_add('rotation_euler', 2).driver
     v_rot_z = drv_rot_z.variables.new()
     v_rot_z.type = 'TRANSFORMS'
-    v_rot_z.name                 = "scaled_rot_z"
+    v_rot_z.name                 = "proxy_rot_z"
     v_rot_z.targets[0].id        = armature
-    v_rot_z.targets[0].bone_target        = proxy_scaled_bname
+    v_rot_z.targets[0].bone_target        = proxy_place_bname
     v_rot_z.targets[0].transform_type = 'ROT_Z'
     v_rot_z.targets[0].transform_space = 'LOCAL_SPACE'
     v_rot_z.targets[0].data_path = "rotation_euler.z"
@@ -404,48 +411,48 @@ class MEGAMINI_CreateRigProxyPair(bpy.types.Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
-        arm_ob = context.active_object
+        active_ob = context.active_object
         # error checks
-        if arm_ob is None:
+        if active_ob is None:
             self.report({'ERROR'}, "Unable to Create Proxy Pair because there is no Active Object.")
             return {'CANCELLED'}
-        if arm_ob.type != 'ARMATURE':
+        if active_ob.type != 'ARMATURE':
             self.report({'ERROR'}, "Unable to Create Proxy Pair because Active Object is not a MegaMini Rig.")
             return {'CANCELLED'}
-        if arm_ob.data.bones.get(SCALED_OBSERVER_BNAME) is None:
-            self.report({'ERROR'}, "Unable to Create Proxy Pair because because Scaled Observer bone not found " +
+        if active_ob.data.bones.get(PROXY_OBSERVER_BNAME) is None:
+            self.report({'ERROR'}, "Unable to Create Proxy Pair because because ProxyObserver bone not found " +
                 "in MegaMini Rig Active Object.")
             return {'CANCELLED'}
-        if arm_ob.data.bones.get(SCALED_WINDOW_BNAME) is None:
-            self.report({'ERROR'}, "Unable to Create Proxy Pair because because Scaled Window bone not found " +
+        if active_ob.data.bones.get(PROXY_FIELD_BNAME) is None:
+            self.report({'ERROR'}, "Unable to Create Proxy Pair because because ProxyField bone not found " +
                 "in MegaMini Rig Active Object.")
             return {'CANCELLED'}
         # create
-        create_proxy_bone_pair(context, arm_ob, True)
+        create_proxy_bone_pair(context, active_ob, True)
         return {'FINISHED'}
 
 class MEGAMINI_AttachRigProxyPair(bpy.types.Operator):
     bl_description = "Add to MegaMini Rig and attach all selected object(s) to MegaMini rig. Rig must be\n" + \
         "selected last, and all other objects will be parented to rig. Note: this uses current position\n" + \
-        "of rig's Observer"
+        "of rig's ProxyObserver"
     bl_idname = "mega_mini.attach_proxy_pair"
     bl_label = "Attach to Rig"
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
-        arm_ob = context.active_object
+        active_ob = context.active_object
         # error checks
-        if arm_ob is None:
+        if active_ob is None:
             self.report({'ERROR'}, "Unable to Create Proxy Pair because there is no Active Object.")
             return {'CANCELLED'}
-        if arm_ob.type != 'ARMATURE':
+        if active_ob.type != 'ARMATURE':
             self.report({'ERROR'}, "Unable to Create Proxy Pair because Active Object is not a MegaMini Rig.")
             return {'CANCELLED'}
         if len(context.selected_objects) < 1:
             self.report({'ERROR'}, "Unable to attach to MegaMini Rig because no object(s) selected")
             return {'CANCELLED'}
         # expand the rig by creating new bones in the rig
-        proxy_actual_bname, proxy_scaled_bname = create_proxy_bone_pair(context, arm_ob, True)
+        place_bname, proxy_place_bname = create_proxy_bone_pair(context, active_ob, True)
 
         # debug: change current frame of animation, to force Blender to update the armature, drivers, etc. in the
         # dependency graph - which Blender isn't automatically doing, for some reason...
@@ -454,7 +461,7 @@ class MEGAMINI_AttachRigProxyPair(bpy.types.Operator):
         bpy.context.scene.frame_set(bpy.context.scene.frame_current)
 
         # make the new Actual bone the active bone, to be used for parenting objects
-        arm_ob.data.bones.active = arm_ob.data.bones[proxy_actual_bname]
+        active_ob.data.bones.active = active_ob.data.bones[place_bname]
         # parent all the selected object(s) to the new Actual bone
         bpy.ops.object.parent_set(type='BONE')
 
@@ -492,9 +499,12 @@ def create_mege_mini_widgets(context):
         # link new collection to currently active collection
         context.view_layer.active_layer_collection.collection.children.link(new_collection)
         collection_hide_in_viewport(context, new_collection.name)
+        # widgets are in MegaMiniHidden collection
         tri_obj = create_widget_triangle(collection_name=new_collection.name)
 
-    return tri_obj
+    widget_ob_dict = { TRI_WIDGET_NAME : tri_obj,
+                      }
+    return widget_ob_dict
 
 def create_widget_triangle(collection_name=None):
     verts = [(math.sin(math.radians(deg)), math.cos(math.radians(deg)), 0) for deg in [0, 120, 240]]
