@@ -50,6 +50,15 @@ PROXY_PLACE_FOCUS_BONETAIL = (0, 0.034441854, 0)
 PLACE_BONEHEAD = (0, 0, 0)
 PLACE_BONETAIL = (0, 4.236067952, 0)
 
+PROXY_FIELD_BONELAYERS = [(x==0) for x in range(32)]
+PROXY_OBSERVER_BONELAYERS = [(x==1) for x in range(32)]
+PROXY_PLACE_BONELAYERS = [(x==2) for x in range(32)]
+PROXY_PLACE_FOCUS_BONELAYERS = PROXY_PLACE_BONELAYERS
+OBSERVER_BONELAYERS = [(x==17) for x in range(32)]
+PLACE_BONELAYERS = [(x==18) for x in range(32)]
+
+RIG_BONEVIS_LAYERS = [(x in [0, 1, 2, 17, 18]) for x in range(32)]
+
 WIDGET_TRIANGLE_OBJNAME = "WGT_Tri"
 WIDGET_PINCH_TRIANGLE_OBJNAME = "WGT_PinchTri"
 WIDGET_QUAD_OBJNAME = "WGT_Quad"
@@ -102,6 +111,7 @@ def create_mega_mini_armature(context, mega_mini_scale):
     b_proxy_field.name = PROXY_FIELD_BNAME
     proxy_field_bname = b_proxy_field.name
     b_proxy_field.show_wire = True
+    b_proxy_field.layers = PROXY_FIELD_BONELAYERS
 
     b_proxy_observer = mega_mini_rig.data.edit_bones.new(name=PROXY_OBSERVER_BNAME)
     # save bone name for later use (in Pose bones mode, where the edit bones name may not be usable - will cause error)
@@ -111,12 +121,14 @@ def create_mega_mini_armature(context, mega_mini_scale):
     b_proxy_observer.tail = mathutils.Vector(PROXY_OBSERVER_BONETAIL)
     b_proxy_observer.parent = b_proxy_field
     b_proxy_observer.show_wire = True
+    b_proxy_observer.layers = PROXY_OBSERVER_BONELAYERS
 
     b_observer = mega_mini_rig.data.edit_bones.new(name=OBSERVER_BNAME)
     observer_bname = b_observer.name
     b_observer.head = mathutils.Vector(OBSERVER_BONEHEAD)
     b_observer.tail = mathutils.Vector(OBSERVER_BONETAIL)
     b_observer.show_wire = True
+    b_observer.layers = OBSERVER_BONELAYERS
 
     # enter Pose mode to allow adding bone constraints
     bpy.ops.object.mode_set(mode='POSE')
@@ -151,6 +163,8 @@ def create_mega_mini_armature(context, mega_mini_scale):
             # parent remaining widgets to first widget
             w.parent = main_parent
 
+    mega_mini_rig.data.layers = RIG_BONEVIS_LAYERS
+
     return mega_mini_rig
 
 class MEGAMINI_CreateMegaMiniRig(bpy.types.Operator):
@@ -182,6 +196,7 @@ def create_proxy_bone_pair(context, mega_mini_rig, use_obs_loc, widget_objs):
     b_place.tail = mathutils.Vector(PLACE_BONETAIL)
     b_place.parent = mega_mini_rig.data.edit_bones[OBSERVER_BNAME]
     b_place.show_wire = True
+    b_place.layers = PLACE_BONELAYERS
 
     b_proxy_place = mega_mini_rig.data.edit_bones.new(name=PROXY_PLACE_BNAME)
     proxy_place_bname = b_proxy_place.name
@@ -189,6 +204,7 @@ def create_proxy_bone_pair(context, mega_mini_rig, use_obs_loc, widget_objs):
     b_proxy_place.tail = mathutils.Vector(PROXY_PLACE_BONETAIL)
     b_proxy_place.parent = mega_mini_rig.data.edit_bones[PROXY_FIELD_BNAME]
     b_proxy_place.show_wire = True
+    b_proxy_place.layers = PROXY_PLACE_BONELAYERS
 
     b_proxy_place_focus = mega_mini_rig.data.edit_bones.new(name=PROXY_PLACE_FOCUS_BNAME)
     proxy_place_focus_bname = b_proxy_place_focus.name
@@ -196,6 +212,7 @@ def create_proxy_bone_pair(context, mega_mini_rig, use_obs_loc, widget_objs):
     b_proxy_place_focus.tail = mathutils.Vector(PROXY_PLACE_FOCUS_BONETAIL)
     b_proxy_place_focus.parent = b_proxy_place
     b_proxy_place_focus.show_wire = True
+    b_proxy_place_focus.layers = PROXY_PLACE_FOCUS_BONELAYERS
 
     # switch to Pose mode to allow adding drivers, and to set pose bone location(s)
     bpy.ops.object.mode_set(mode='POSE')
