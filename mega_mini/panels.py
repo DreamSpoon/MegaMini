@@ -43,7 +43,15 @@ REGULAR_BONE_TAIL = (0, 1, 0)
 SHORT_BONE_HEAD = (0, 0, 0)
 SHORT_BONE_TAIL = (0, 0.1, 0)
 
+WIDGET_TRIANGLE_OBJNAME = "WGT_Tri"
+WIDGET_PINCH_TRIANGLE_OBJNAME = "WGT_PinchTri"
+WIDGET_QUAD_OBJNAME = "WGT_Quad"
+WIDGET_PINCH_QUAD_OBJNAME = "WGT_PinchQuad"
+
 TRI_WIDGET_NAME = "WidgetTriangle"
+TRI_PINCH_WIDGET_NAME = "WidgetPinchTriangle"
+QUAD_WIDGET_NAME = "WidgetQuad"
+PINCH_QUAD_WIDGET_NAME = "WidgetPinchQuad"
 
 def add_bconst_scl_influence_driver(mega_mini_rig, proxy_obs_bconst):
     drv_copy_loc = proxy_obs_bconst.driver_add('influence').driver
@@ -86,20 +94,16 @@ def create_mega_mini_armature(context, mega_mini_scale):
     b_proxy_observer.head = mathutils.Vector(SHORT_BONE_HEAD)
     b_proxy_observer.tail = mathutils.Vector(SHORT_BONE_TAIL)
     b_proxy_observer.parent = b_proxy_field
-    # custom bone shape should show as Wireframe
-    b_proxy_observer.show_wire = True
 
     b_observer = mega_mini_rig.data.edit_bones.new(name=OBSERVER_BNAME)
     observer_bname = b_observer.name
     b_observer.head = mathutils.Vector(REGULAR_BONE_HEAD)
     b_observer.tail = mathutils.Vector(REGULAR_BONE_TAIL)
-    # custom bone shape should show as Wireframe
-    b_observer.show_wire = True
 
     # enter Pose mode to allow adding bone constraints
     bpy.ops.object.mode_set(mode='POSE')
     # apply custom bone shapes to Sun Target, Sensor, and Blinds (apply to Blinds by way of Diff Cube),
-    mega_mini_rig.pose.bones[proxy_observer_bname].custom_shape = bpy.data.objects[widget_objs[TRI_WIDGET_NAME].name]
+    mega_mini_rig.pose.bones[proxy_observer_bname].custom_shape = bpy.data.objects[widget_objs[TRI_PINCH_WIDGET_NAME].name]
     mega_mini_rig.pose.bones[observer_bname].custom_shape = bpy.data.objects[widget_objs[TRI_WIDGET_NAME].name]
     # add bone constraint 'Copy Location' to ProxyObserver, so ProxyObserver bone can be adjusted (fine-tuned) with
     # Observer bone, e.g. parent Observer bone to scene Camera, so forced perspective always looks correct to Camera
@@ -146,7 +150,7 @@ class MEGAMINI_CreateMegaMiniRig(bpy.types.Operator):
 
 # "edit bones" must be created at origin (head at origin, ...), so that pose bone locations can be used by drivers
 # to perform offsets, distance calculations, etc.
-def create_proxy_bone_pair(context, mega_mini_rig, use_obs_loc):
+def create_proxy_bone_pair(context, mega_mini_rig, use_obs_loc, widget_objs):
     # save old view3d mode and enter Edit mode, to add bones to mega_mini_rig
     old_3dview_mode = context.mode
 
@@ -160,18 +164,22 @@ def create_proxy_bone_pair(context, mega_mini_rig, use_obs_loc):
 
     b_proxy_place = mega_mini_rig.data.edit_bones.new(name=PROXY_PLACE_BNAME)
     proxy_place_bname = b_proxy_place.name
-    b_proxy_place.head = mathutils.Vector(REGULAR_BONE_HEAD)
-    b_proxy_place.tail = mathutils.Vector(REGULAR_BONE_TAIL)
+    b_proxy_place.head = mathutils.Vector(SHORT_BONE_HEAD)
+    b_proxy_place.tail = mathutils.Vector(SHORT_BONE_TAIL)
     b_proxy_place.parent = mega_mini_rig.data.edit_bones[PROXY_FIELD_BNAME]
 
     b_proxy_place_focus = mega_mini_rig.data.edit_bones.new(name=PROXY_PLACE_FOCUS_BNAME)
     proxy_place_focus_bname = b_proxy_place_focus.name
-    b_proxy_place_focus.head = mathutils.Vector(REGULAR_BONE_HEAD)
-    b_proxy_place_focus.tail = mathutils.Vector(REGULAR_BONE_TAIL)
+    b_proxy_place_focus.head = mathutils.Vector(SHORT_BONE_HEAD)
+    b_proxy_place_focus.tail = mathutils.Vector(SHORT_BONE_TAIL)
     b_proxy_place_focus.parent = b_proxy_place
 
     # switch to Pose mode to allow adding drivers, and to set pose bone location(s)
     bpy.ops.object.mode_set(mode='POSE')
+
+    # custom bone shape, and show as Wireframe
+    mega_mini_rig.pose.bones[place_bname].custom_shape = bpy.data.objects[widget_objs[QUAD_WIDGET_NAME].name]
+    mega_mini_rig.pose.bones[proxy_place_bname].custom_shape = bpy.data.objects[widget_objs[PINCH_QUAD_WIDGET_NAME].name]
 
     # add driver to actual bone to make it scale with scaled bone
     add_bone_scl_drivers(mega_mini_rig, place_bname, proxy_place_focus_bname, PROXY_OBSERVER_BNAME)
@@ -403,6 +411,20 @@ def add_bone_rot_drivers(armature, place_bname, proxy_place_bname):
     v_rot_z.targets[0].data_path = "rotation_euler.z"
     drv_rot_z.expression = v_rot_z.name
 
+def get_widget_objs_from_rig(active_ob):
+    widget_objs = {}
+    for ob in bpy.data.objects:
+        if ob.parent == active_ob or (ob.parent != None and ob.parent.parent == active_ob):
+            if WIDGET_TRIANGLE_OBJNAME in ob.name:
+                widget_objs[TRI_WIDGET_NAME] = ob
+            elif WIDGET_PINCH_TRIANGLE_OBJNAME in ob.name:
+                widget_objs[TRI_PINCH_WIDGET_NAME] = ob
+            elif WIDGET_QUAD_OBJNAME in ob.name:
+                widget_objs[QUAD_WIDGET_NAME] = ob
+            elif WIDGET_PINCH_QUAD_OBJNAME in ob.name:
+                widget_objs[PINCH_QUAD_WIDGET_NAME] = ob
+    return widget_objs
+
 class MEGAMINI_CreateRigProxyPair(bpy.types.Operator):
     bl_description = "Based on the current position of MegaMini rig's Scaled Observer, create an Actual-Scaled pair of " + \
         "bones.\nObjects parented to the Actual of the pair will be scaled and moved as the Scaled Observer moves"
@@ -427,8 +449,10 @@ class MEGAMINI_CreateRigProxyPair(bpy.types.Operator):
             self.report({'ERROR'}, "Unable to Create Proxy Pair because because ProxyField bone not found " +
                 "in MegaMini Rig Active Object.")
             return {'CANCELLED'}
+
+        widget_objs = get_widget_objs_from_rig(active_ob)
         # create
-        create_proxy_bone_pair(context, active_ob, True)
+        create_proxy_bone_pair(context, active_ob, True, widget_objs)
         return {'FINISHED'}
 
 class MEGAMINI_AttachRigProxyPair(bpy.types.Operator):
@@ -451,8 +475,9 @@ class MEGAMINI_AttachRigProxyPair(bpy.types.Operator):
         if len(context.selected_objects) < 1:
             self.report({'ERROR'}, "Unable to attach to MegaMini Rig because no object(s) selected")
             return {'CANCELLED'}
+        widget_objs = get_widget_objs_from_rig(active_ob)
         # expand the rig by creating new bones in the rig
-        place_bname, proxy_place_bname = create_proxy_bone_pair(context, active_ob, True)
+        place_bname, proxy_place_bname = create_proxy_bone_pair(context, active_ob, True, widget_objs)
 
         # debug: change current frame of animation, to force Blender to update the armature, drivers, etc. in the
         # dependency graph - which Blender isn't automatically doing, for some reason...
@@ -487,11 +512,20 @@ def create_mege_mini_widgets(context):
     # if v2.7 or earlier
     if bpy.app.version < (2,80,0):
         tri_obj = create_widget_triangle()
-        tri_obj.draw_type = 'WIRE'
+        tri_pinch_obj = create_widget_pinch_triangle()
+        quad_obj = create_widget_square()
+        pinch_quad_obj = create_widget_pinch_square()
+
         # widgets are only in final layer
         tri_obj.layers[19] = True
+        tri_pinch_obj.layers[19] = True
+        quad_obj.layers[19] = True
+        pinch_quad_obj.layers[19] = True
         for i in range(19):
             tri_obj.layers[i] = False
+            tri_pinch_obj.layers[i] = False
+            quad_obj.layers[i] = False
+            pinch_quad_obj.layers[i] = False
     # else v2.8 or later
     else:
         new_collection = bpy.data.collections.new("MegaMiniHidden")
@@ -499,18 +533,66 @@ def create_mege_mini_widgets(context):
         # link new collection to currently active collection
         context.view_layer.active_layer_collection.collection.children.link(new_collection)
         collection_hide_in_viewport(context, new_collection.name)
+
         # widgets are in MegaMiniHidden collection
         tri_obj = create_widget_triangle(collection_name=new_collection.name)
+        tri_pinch_obj = create_widget_pinch_triangle(collection_name=new_collection.name)
+        quad_obj = create_widget_square(collection_name=new_collection.name)
+        pinch_quad_obj = create_widget_pinch_square(collection_name=new_collection.name)
 
     widget_ob_dict = { TRI_WIDGET_NAME : tri_obj,
-                      }
+                      TRI_PINCH_WIDGET_NAME : tri_pinch_obj,
+                      QUAD_WIDGET_NAME : quad_obj,
+                      PINCH_QUAD_WIDGET_NAME : pinch_quad_obj,
+                     }
     return widget_ob_dict
 
 def create_widget_triangle(collection_name=None):
     verts = [(math.sin(math.radians(deg)), math.cos(math.radians(deg)), 0) for deg in [0, 120, 240]]
-    faces = [(0, 1, 2)]
+    edges=[ (0, 1), (1, 2), (2, 0) ]
     if collection_name is None:
-        return create_mesh_obj_from_pydata(verts, faces, obj_name="WGT_Tri")
+        return create_mesh_obj_from_pydata(verts, edges=edges, obj_name=WIDGET_TRIANGLE_OBJNAME)
     else:
-        return create_mesh_obj_from_pydata(verts, faces, obj_name="WGT_Tri",
+        return create_mesh_obj_from_pydata(verts, edges=edges, obj_name=WIDGET_TRIANGLE_OBJNAME,
+                                           collection_name=collection_name)
+
+def create_widget_pinch_triangle(collection_name=None):
+    verts = [(r * math.sin(math.radians(deg)), r * math.cos(math.radians(deg)), 0) for (deg, r) in
+             [(0, 1), (60, 0.35), (120, 1), (180, 0.35), (240, 1), (300, 0.35)]]
+    edges=[ (0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 0) ]
+    if collection_name is None:
+        return create_mesh_obj_from_pydata(verts, edges=edges, obj_name=WIDGET_PINCH_TRIANGLE_OBJNAME)
+    else:
+        return create_mesh_obj_from_pydata(verts, edges=edges, obj_name=WIDGET_PINCH_TRIANGLE_OBJNAME,
+                                           collection_name=collection_name)
+
+def create_widget_square(collection_name=None):
+    verts = [(-0.5, -0.5, 0),
+             (0.5, -0.5, 0),
+             (0.5, 0.5, 0),
+             (-0.5, 0.5, 0), ]
+    edges = [(0, 1),
+             (1, 2),
+             (2, 3),
+             (3, 0), ]
+    if collection_name is None:
+        return create_mesh_obj_from_pydata(verts, edges=edges, obj_name=WIDGET_QUAD_OBJNAME)
+    else:
+        return create_mesh_obj_from_pydata(verts, edges=edges, obj_name=WIDGET_QUAD_OBJNAME,
+                                           collection_name=collection_name)
+
+def create_widget_pinch_square(collection_name=None):
+    verts = [(-0.5, -0.5, 0),
+             (0.0, -0.4, 0),
+             (0.5, -0.5, 0),
+             (0.4, 0.0, 0),
+             (0.5, 0.5, 0),
+             (0.0, 0.4, 0),
+             (-0.5, 0.5, 0),
+             (-0.4, 0.0, 0),]
+    edges = [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 7), (7, 0) ]
+    if collection_name is None:
+        return create_mesh_obj_from_pydata(verts, edges=edges, obj_name=WIDGET_PINCH_QUAD_OBJNAME)
+    else:
+        return create_mesh_obj_from_pydata(verts, edges=edges, obj_name=WIDGET_PINCH_QUAD_OBJNAME,
                                            collection_name=collection_name)
