@@ -31,27 +31,41 @@ PROXY_FIELD_BNAME = "ProxyField"
 PROXY_OBSERVER_BNAME = "ProxyObserver"
 OBSERVER_BNAME = "Observer"
 PROXY_PLACE_BNAME = "ProxyPlace"
-PLACE_BNAME = "Place"
 PROXY_PLACE_FOCUS_BNAME = "ProxyPlaceFocus"
+PLACE_BNAME = "Place"
 
 OBJ_PROP_SCALE = "mega_mini_scale"
 OBJ_PROP_BONE_SCL_MULT = "mega_mini_bone_scl_mult"
 
-REGULAR_BONE_HEAD = (0, 0, 0)
-REGULAR_BONE_TAIL = (0, 1, 0)
-
-SHORT_BONE_HEAD = (0, 0, 0)
-SHORT_BONE_TAIL = (0, 0.1, 0)
+PROXY_FIELD_BONEHEAD = (0, 0, 0)
+PROXY_FIELD_BONETAIL = (0, 6.854101911, 0)
+PROXY_OBSERVER_BONEHEAD = (0, 0, 0)
+PROXY_OBSERVER_BONETAIL = (0, 0.034441854, 0)
+OBSERVER_BONEHEAD = (0, 0, 0)
+OBSERVER_BONETAIL = (0, 0.61803399, 0)
+PROXY_PLACE_BONEHEAD = (0, 0, 0)
+PROXY_PLACE_BONETAIL = (0, 0.090169945, 0)
+PROXY_PLACE_FOCUS_BONEHEAD = (0, 0, 0)
+PROXY_PLACE_FOCUS_BONETAIL = (0, 0.034441854, 0)
+PLACE_BONEHEAD = (0, 0, 0)
+PLACE_BONETAIL = (0, 4.236067952, 0)
 
 WIDGET_TRIANGLE_OBJNAME = "WGT_Tri"
 WIDGET_PINCH_TRIANGLE_OBJNAME = "WGT_PinchTri"
 WIDGET_QUAD_OBJNAME = "WGT_Quad"
 WIDGET_PINCH_QUAD_OBJNAME = "WGT_PinchQuad"
+WIDGET_CIRCLE_OBJNAME = "WGT_Circle"
+WIDGET_CARDIOD_OBJNAME = "WGT_Cardiod"
 
 TRI_WIDGET_NAME = "WidgetTriangle"
 TRI_PINCH_WIDGET_NAME = "WidgetPinchTriangle"
 QUAD_WIDGET_NAME = "WidgetQuad"
 PINCH_QUAD_WIDGET_NAME = "WidgetPinchQuad"
+CIRCLE_WIDGET_NAME = "WidgetCircle"
+CARDIOD_WIDGET_NAME = "WidgetCardiod"
+
+WIDGET_CIRCLE_VERT_COUNT = 32
+WIDGET_CARDIOD_VERT_COUNT = 32
 
 def add_bconst_scl_influence_driver(mega_mini_rig, proxy_obs_bconst):
     drv_copy_loc = proxy_obs_bconst.driver_add('influence').driver
@@ -83,30 +97,36 @@ def create_mega_mini_armature(context, mega_mini_scale):
     mega_mini_rig.data.show_bone_custom_shapes = True
     # modify default bone to make ProxyField bone, to hold proxies for observer(s) and actual place(s)
     b_proxy_field = mega_mini_rig.data.edit_bones[0]
-    b_proxy_field.head = mathutils.Vector(REGULAR_BONE_HEAD)
-    b_proxy_field.tail = mathutils.Vector(REGULAR_BONE_TAIL)
+    b_proxy_field.head = mathutils.Vector(PROXY_FIELD_BONEHEAD)
+    b_proxy_field.tail = mathutils.Vector(PROXY_FIELD_BONETAIL)
     b_proxy_field.name = PROXY_FIELD_BNAME
+    proxy_field_bname = b_proxy_field.name
+    b_proxy_field.show_wire = True
 
     b_proxy_observer = mega_mini_rig.data.edit_bones.new(name=PROXY_OBSERVER_BNAME)
     # save bone name for later use (in Pose bones mode, where the edit bones name may not be usable - will cause error)
     proxy_observer_bname = b_proxy_observer.name
     # set bone data
-    b_proxy_observer.head = mathutils.Vector(SHORT_BONE_HEAD)
-    b_proxy_observer.tail = mathutils.Vector(SHORT_BONE_TAIL)
+    b_proxy_observer.head = mathutils.Vector(PROXY_OBSERVER_BONEHEAD)
+    b_proxy_observer.tail = mathutils.Vector(PROXY_OBSERVER_BONETAIL)
     b_proxy_observer.parent = b_proxy_field
+    b_proxy_observer.show_wire = True
 
     b_observer = mega_mini_rig.data.edit_bones.new(name=OBSERVER_BNAME)
     observer_bname = b_observer.name
-    b_observer.head = mathutils.Vector(REGULAR_BONE_HEAD)
-    b_observer.tail = mathutils.Vector(REGULAR_BONE_TAIL)
+    b_observer.head = mathutils.Vector(OBSERVER_BONEHEAD)
+    b_observer.tail = mathutils.Vector(OBSERVER_BONETAIL)
+    b_observer.show_wire = True
 
     # enter Pose mode to allow adding bone constraints
     bpy.ops.object.mode_set(mode='POSE')
     # apply custom bone shapes to Sun Target, Sensor, and Blinds (apply to Blinds by way of Diff Cube),
     mega_mini_rig.pose.bones[proxy_observer_bname].custom_shape = bpy.data.objects[widget_objs[TRI_PINCH_WIDGET_NAME].name]
     mega_mini_rig.pose.bones[observer_bname].custom_shape = bpy.data.objects[widget_objs[TRI_WIDGET_NAME].name]
-    # add bone constraint 'Copy Location' to ProxyObserver, so ProxyObserver bone can be adjusted (fine-tuned) with
-    # Observer bone, e.g. parent Observer bone to scene Camera, so forced perspective always looks correct to Camera
+    mega_mini_rig.pose.bones[proxy_field_bname].custom_shape = bpy.data.objects[widget_objs[CIRCLE_WIDGET_NAME].name]
+    # Add bone constraint 'Copy Location' to ProxyObserver, so ProxyObserver bone can be adjusted (fine-tuned) with
+    # Observer bone, e.g. add 'Copy Location' bone constraint to Observer bone to copy scene Camera location,
+    # so forced perspective always looks correct to Camera.
     proxy_obs_bconst = mega_mini_rig.pose.bones[proxy_observer_bname].constraints.new(type='COPY_LOCATION')
     proxy_obs_bconst.target = mega_mini_rig
     proxy_obs_bconst.subtarget = observer_bname
@@ -158,21 +178,24 @@ def create_proxy_bone_pair(context, mega_mini_rig, use_obs_loc, widget_objs):
 
     b_place = mega_mini_rig.data.edit_bones.new(name=PLACE_BNAME)
     place_bname = b_place.name
-    b_place.head = mathutils.Vector(REGULAR_BONE_HEAD)
-    b_place.tail = mathutils.Vector(REGULAR_BONE_TAIL)
+    b_place.head = mathutils.Vector(PLACE_BONEHEAD)
+    b_place.tail = mathutils.Vector(PLACE_BONETAIL)
     b_place.parent = mega_mini_rig.data.edit_bones[OBSERVER_BNAME]
+    b_place.show_wire = True
 
     b_proxy_place = mega_mini_rig.data.edit_bones.new(name=PROXY_PLACE_BNAME)
     proxy_place_bname = b_proxy_place.name
-    b_proxy_place.head = mathutils.Vector(SHORT_BONE_HEAD)
-    b_proxy_place.tail = mathutils.Vector(SHORT_BONE_TAIL)
+    b_proxy_place.head = mathutils.Vector(PROXY_PLACE_BONEHEAD)
+    b_proxy_place.tail = mathutils.Vector(PROXY_PLACE_BONETAIL)
     b_proxy_place.parent = mega_mini_rig.data.edit_bones[PROXY_FIELD_BNAME]
+    b_proxy_place.show_wire = True
 
     b_proxy_place_focus = mega_mini_rig.data.edit_bones.new(name=PROXY_PLACE_FOCUS_BNAME)
     proxy_place_focus_bname = b_proxy_place_focus.name
-    b_proxy_place_focus.head = mathutils.Vector(SHORT_BONE_HEAD)
-    b_proxy_place_focus.tail = mathutils.Vector(SHORT_BONE_TAIL)
+    b_proxy_place_focus.head = mathutils.Vector(PROXY_PLACE_FOCUS_BONEHEAD)
+    b_proxy_place_focus.tail = mathutils.Vector(PROXY_PLACE_FOCUS_BONETAIL)
     b_proxy_place_focus.parent = b_proxy_place
+    b_proxy_place_focus.show_wire = True
 
     # switch to Pose mode to allow adding drivers, and to set pose bone location(s)
     bpy.ops.object.mode_set(mode='POSE')
@@ -180,6 +203,7 @@ def create_proxy_bone_pair(context, mega_mini_rig, use_obs_loc, widget_objs):
     # custom bone shape, and show as Wireframe
     mega_mini_rig.pose.bones[place_bname].custom_shape = bpy.data.objects[widget_objs[QUAD_WIDGET_NAME].name]
     mega_mini_rig.pose.bones[proxy_place_bname].custom_shape = bpy.data.objects[widget_objs[PINCH_QUAD_WIDGET_NAME].name]
+    mega_mini_rig.pose.bones[proxy_place_focus_bname].custom_shape = bpy.data.objects[widget_objs[CARDIOD_WIDGET_NAME].name]
 
     # add driver to actual bone to make it scale with scaled bone
     add_bone_scl_drivers(mega_mini_rig, place_bname, proxy_place_focus_bname, PROXY_OBSERVER_BNAME)
@@ -423,6 +447,10 @@ def get_widget_objs_from_rig(active_ob):
                 widget_objs[QUAD_WIDGET_NAME] = ob
             elif WIDGET_PINCH_QUAD_OBJNAME in ob.name:
                 widget_objs[PINCH_QUAD_WIDGET_NAME] = ob
+            elif WIDGET_CIRCLE_OBJNAME in ob.name:
+                widget_objs[CIRCLE_WIDGET_NAME] = ob
+            elif WIDGET_CARDIOD_OBJNAME in ob.name:
+                widget_objs[CARDIOD_WIDGET_NAME] = ob
     return widget_objs
 
 class MEGAMINI_CreateRigProxyPair(bpy.types.Operator):
@@ -515,17 +543,23 @@ def create_mege_mini_widgets(context):
         tri_pinch_obj = create_widget_pinch_triangle()
         quad_obj = create_widget_square()
         pinch_quad_obj = create_widget_pinch_square()
+        circle_obj = create_widget_circle()
+        cardiod_obj = create_widget_cardiod()
 
         # widgets are only in final layer
         tri_obj.layers[19] = True
         tri_pinch_obj.layers[19] = True
         quad_obj.layers[19] = True
         pinch_quad_obj.layers[19] = True
+        circle_obj.layers[19] = True
+        cardiod_obj.layers[19] = True
         for i in range(19):
             tri_obj.layers[i] = False
             tri_pinch_obj.layers[i] = False
             quad_obj.layers[i] = False
             pinch_quad_obj.layers[i] = False
+            circle_obj.layers[i] = False
+            cardiod_obj.layers[i] = False
     # else v2.8 or later
     else:
         new_collection = bpy.data.collections.new("MegaMiniHidden")
@@ -539,17 +573,21 @@ def create_mege_mini_widgets(context):
         tri_pinch_obj = create_widget_pinch_triangle(collection_name=new_collection.name)
         quad_obj = create_widget_square(collection_name=new_collection.name)
         pinch_quad_obj = create_widget_pinch_square(collection_name=new_collection.name)
+        circle_obj = create_widget_circle(collection_name=new_collection.name)
+        cardiod_obj = create_widget_cardiod(collection_name=new_collection.name)
 
     widget_ob_dict = { TRI_WIDGET_NAME : tri_obj,
                       TRI_PINCH_WIDGET_NAME : tri_pinch_obj,
                       QUAD_WIDGET_NAME : quad_obj,
                       PINCH_QUAD_WIDGET_NAME : pinch_quad_obj,
+                      CIRCLE_WIDGET_NAME: circle_obj,
+                      CARDIOD_WIDGET_NAME: cardiod_obj,
                      }
     return widget_ob_dict
 
 def create_widget_triangle(collection_name=None):
     verts = [(math.sin(math.radians(deg)), math.cos(math.radians(deg)), 0) for deg in [0, 120, 240]]
-    edges=[ (0, 1), (1, 2), (2, 0) ]
+    edges = [ ( x, (x+1)*(x+1!=len(verts)) ) for x in range(len(verts)) ]
     if collection_name is None:
         return create_mesh_obj_from_pydata(verts, edges=edges, obj_name=WIDGET_TRIANGLE_OBJNAME)
     else:
@@ -559,7 +597,7 @@ def create_widget_triangle(collection_name=None):
 def create_widget_pinch_triangle(collection_name=None):
     verts = [(r * math.sin(math.radians(deg)), r * math.cos(math.radians(deg)), 0) for (deg, r) in
              [(0, 1), (60, 0.35), (120, 1), (180, 0.35), (240, 1), (300, 0.35)]]
-    edges=[ (0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 0) ]
+    edges = [ ( x, (x+1)*(x+1!=len(verts)) ) for x in range(len(verts)) ]
     if collection_name is None:
         return create_mesh_obj_from_pydata(verts, edges=edges, obj_name=WIDGET_PINCH_TRIANGLE_OBJNAME)
     else:
@@ -571,10 +609,7 @@ def create_widget_square(collection_name=None):
              (0.5, -0.5, 0),
              (0.5, 0.5, 0),
              (-0.5, 0.5, 0), ]
-    edges = [(0, 1),
-             (1, 2),
-             (2, 3),
-             (3, 0), ]
+    edges = [ ( x, (x+1)*(x+1!=len(verts)) ) for x in range(len(verts)) ]
     if collection_name is None:
         return create_mesh_obj_from_pydata(verts, edges=edges, obj_name=WIDGET_QUAD_OBJNAME)
     else:
@@ -590,9 +625,29 @@ def create_widget_pinch_square(collection_name=None):
              (0.0, 0.4, 0),
              (-0.5, 0.5, 0),
              (-0.4, 0.0, 0),]
-    edges = [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 7), (7, 0) ]
+    edges = [ ( x, (x+1)*(x+1!=len(verts)) ) for x in range(len(verts)) ]
     if collection_name is None:
         return create_mesh_obj_from_pydata(verts, edges=edges, obj_name=WIDGET_PINCH_QUAD_OBJNAME)
     else:
         return create_mesh_obj_from_pydata(verts, edges=edges, obj_name=WIDGET_PINCH_QUAD_OBJNAME,
+                                           collection_name=collection_name)
+
+def create_widget_circle(collection_name=None):
+    verts = [(math.sin(rads), math.cos(rads), 0) for rads in \
+             [index/WIDGET_CIRCLE_VERT_COUNT*2*math.pi for index in range(WIDGET_CIRCLE_VERT_COUNT)]]
+    edges = [ ( x, (x+1)*(x+1!=len(verts)) ) for x in range(len(verts)) ]
+    if collection_name is None:
+        return create_mesh_obj_from_pydata(verts, edges=edges, obj_name=WIDGET_CIRCLE_OBJNAME)
+    else:
+        return create_mesh_obj_from_pydata(verts, edges=edges, obj_name=WIDGET_CIRCLE_OBJNAME,
+                                           collection_name=collection_name)
+
+def create_widget_cardiod(collection_name=None):
+    verts = [((1-math.cos(rads))*math.sin(rads), (1-math.cos(rads))*math.cos(rads), 0) for rads in \
+             [index/WIDGET_CARDIOD_VERT_COUNT*2*math.pi for index in range(WIDGET_CARDIOD_VERT_COUNT)]]
+    edges = [ ( x, (x+1)*(x+1!=len(verts)) ) for x in range(len(verts)) ]
+    if collection_name is None:
+        return create_mesh_obj_from_pydata(verts, edges=edges, obj_name=WIDGET_CARDIOD_OBJNAME)
+    else:
+        return create_mesh_obj_from_pydata(verts, edges=edges, obj_name=WIDGET_CARDIOD_OBJNAME,
                                            collection_name=collection_name)
