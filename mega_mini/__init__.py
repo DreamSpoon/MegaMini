@@ -22,7 +22,7 @@ bl_info = {
     "name": "Mega Mini",
     "description": "Use 'forced perspective' optical illusion to 'condense space' between objects. Display far away objects at a smaller scale and closer distance than would be realistic.",
     "author": "Dave",
-    "version": (0, 1, 1),
+    "version": (0, 2, 0),
     "blender": (2, 80, 0),
     "location": "View 3D -> Tools -> MegaMini",
     "category": "Other",
@@ -52,6 +52,7 @@ class MEGAMINI_PT_Observer(bpy.types.Panel):
         box.label(text="Create Observer")
         box.operator("mega_mini.create_mega_mini_rig")
         box.prop(scn, "MegaMini_NewObserverScale")
+        box.prop(scn, "MegaMini_NewObserverFP_Power")
 
 class MEGAMINI_PT_Proxy(bpy.types.Panel):
     bl_label = "Proxy"
@@ -88,6 +89,9 @@ def register_props():
     bp = bpy.props
     bts.MegaMini_NewObserverScale = bp.FloatProperty(name="Observer Scale",
         description="Scaling factor to assign to MegaMini rig", default=1000.0, min=0.0)
+    bts.MegaMini_NewObserverFP_Power = bp.FloatProperty(name="Forced Perspective Power",
+        description="Forced perspective distance power value, for generating scales of objects attached to MegaMini " +
+        "rig. Value is usually between zero and one.", default=0.5)
 
 if __name__ == "__main__":
     register()

@@ -35,6 +35,7 @@ PROXY_PLACE_FOCUS_BNAME = "ProxyPlaceFocus"
 PLACE_BNAME = "Place"
 
 OBJ_PROP_SCALE = "mega_mini_scale"
+OBJ_PROP_FP_POWER = "mega_mini_fp_power"
 OBJ_PROP_BONE_SCL_MULT = "mega_mini_bone_scl_mult"
 
 PROXY_FIELD_BONEHEAD = (0, 0, 0)
@@ -91,7 +92,7 @@ def add_bconst_scl_influence_driver(mega_mini_rig, proxy_obs_bconst):
 #     - 'Field' is the mega_mini_rig itself, 'ProxyField' is intended to be like a 'TV remote controller',
 #       easy to pick up and move around in the scene, without modifying the positions of objects in the rig
 #     - 'ProxyField' is a Scaled Remote Controller for an Actual World of objects
-def create_mega_mini_armature(context, mega_mini_scale):
+def create_mega_mini_armature(context, mega_mini_scale, mega_mini_fp_power):
     widget_objs = create_mege_mini_widgets(context)
 
     old_3dview_mode = context.mode
@@ -102,6 +103,7 @@ def create_mega_mini_armature(context, mega_mini_scale):
     # the mega_mini_rig represents the "actual space", the ProxyField bone represents the "scaled space"
     mega_mini_rig.name = RIG_BASENAME
     mega_mini_rig[OBJ_PROP_SCALE] = mega_mini_scale
+    mega_mini_rig[OBJ_PROP_FP_POWER] = mega_mini_fp_power
     # ensure mega_mini_rig will display custom bone shapes
     mega_mini_rig.data.show_bone_custom_shapes = True
     # modify default bone to make ProxyField bone, to hold proxies for observer(s) and actual place(s)
@@ -176,10 +178,11 @@ class MEGAMINI_CreateMegaMiniRig(bpy.types.Operator):
 
     def execute(self, context):
         mega_mini_scale = context.scene.MegaMini_NewObserverScale
+        mega_mini_fp_power = context.scene.MegaMini_NewObserverFP_Power
         if mega_mini_scale <= 0:
             self.report({'ERROR'}, "Error in new Observer scale. Must be above zero.")
             return {'CANCELLED'}
-        create_mega_mini_armature(context, mega_mini_scale)
+        create_mega_mini_armature(context, mega_mini_scale, mega_mini_fp_power)
         return {'FINISHED'}
 
 # "edit bones" must be created at origin (head at origin, ...), so that pose bone locations can be used by drivers
@@ -263,6 +266,12 @@ def add_bone_scl_drivers(armature, place_bname, proxy_place_focus_bname, proxy_o
     v_mega_mini_scale.targets[0].id        = armature
     v_mega_mini_scale.targets[0].data_path = "[\""+OBJ_PROP_SCALE+"\"]"
 
+    v_mega_mini_fp_power = drv_scale_x.variables.new()
+    v_mega_mini_fp_power.type = 'SINGLE_PROP'
+    v_mega_mini_fp_power.name                 = "mega_mini_fp_pow"
+    v_mega_mini_fp_power.targets[0].id        = armature
+    v_mega_mini_fp_power.targets[0].data_path = "[\""+OBJ_PROP_FP_POWER+"\"]"
+
     v_self_bone_scale = drv_scale_x.variables.new()
     v_self_bone_scale.type = 'SINGLE_PROP'
     v_self_bone_scale.name                 = "self_bone_scale"
@@ -270,9 +279,11 @@ def add_bone_scl_drivers(armature, place_bname, proxy_place_focus_bname, proxy_o
     v_self_bone_scale.targets[0].data_path = "pose.bones[\""+place_bname+"\"][\""+OBJ_PROP_BONE_SCL_MULT+"\"]"
 
     # Actual's forced perspective scaling value equals
-    #     1 over square root of
-    #         1 plus actual distance (un-scaled distance) from Scaled Observer to Scaled Focus
-    drv_scale_x.expression = v_self_bone_scale.name+" / sqrt(1 + "+v_mega_mini_scale.name+" * "+v_proxy_dist.name+")"
+    #     1 over
+    #         1 plus distance from ProxyObserver to ProxyPlaceFocus
+    #             to the power of "forced perspective power" value (usually 0.5 - meaning: take square root)
+    drv_scale_x.expression = v_self_bone_scale.name+" / ( (1 + "+v_mega_mini_scale.name+" * "+v_proxy_dist.name + \
+        ") ** "+v_mega_mini_fp_power.name+")"
 
     # Y scale is copy of X scale value
     drv_scale_y = armature.pose.bones[place_bname].driver_add('scale', 1).driver
