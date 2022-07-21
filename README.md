@@ -93,3 +93,9 @@ The default setting of "mega_mini_fp_power" is 0.5 (square root), which results 
 Setting "mega_mini_fp_power" to 0.25, or less, results in objects shrinking as they move very far away from the observer - but the "forced perspective" effect comes on in a less dramatic fashion - i.e. less "warping" of space.
   - better suited to "earth satellite scale"
     - e.g. giant space ships parked in Earth's orbit
+
+# Geometry Nodes Notes
+Geometry Nodes support is still work in progress, but going very well, currently:
+- objects must be attached to a MegaMini Rig before Geometry Nodes can be added to them
+- objects should be at the center of the place where they are attached
+  - i.e. the object's location XYZ should be (0, 0, 0)
