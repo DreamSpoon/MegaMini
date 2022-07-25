@@ -49,7 +49,7 @@ PROXY_PLACE_BONETAIL = (0, 0.090169945, 0)
 PROXY_PLACE_FOCUS_BONEHEAD = (0, 0, 0)
 PROXY_PLACE_FOCUS_BONETAIL = (0, 0.034441854, 0)
 PLACE_BONEHEAD = (0, 0, 0)
-PLACE_BONETAIL = (0, 4.236067952, 0)
+PLACE_BONETAIL = (0, 4, 0)
 
 PROXY_FIELD_BONELAYERS = [(x==0) for x in range(32)]
 PROXY_OBSERVER_BONELAYERS = [(x==1) for x in range(32)]
@@ -682,17 +682,19 @@ def create_mega_mini_custom_geo_node_group(node_group_name):
     new_nodes = {}
     new_node_group = bpy.data.node_groups.new(name=node_group_name, type='GeometryNodeTree')
     new_node_group.inputs.new(type='NodeSocketGeometry', name="Geometry")
-    new_node_group.inputs.new(type='NodeSocketVectorTranslation', name="Observer Loc")
+    new_node_group.inputs.new(type='NodeSocketVector', name="Observer Loc")
     new_node_group.inputs.new(type='NodeSocketVector', name="ProxyObserver Loc")
     new_node_group.inputs.new(type='NodeSocketFloat', name="MegaMini Scale")
     new_node_group.inputs.new(type='NodeSocketFloat', name="MegaMini FP Power")
     new_node_group.inputs.new(type='NodeSocketVector', name="Place Scale")
+    new_node_group.inputs.new(type='NodeSocketVector', name="Object Loc")
+    new_node_group.inputs.new(type='NodeSocketVectorEuler', name="Object Rot")
+    new_node_group.inputs.new(type='NodeSocketVector', name="Object Scale")
     new_node_group.outputs.new(type='NodeSocketGeometry', name="Geometry")
     tree_nodes = new_node_group.nodes
-    # delete all nodes before adding new nodes
+    # delete old nodes before adding new nodes
     tree_nodes.clear()
 
-    # material shader nodes
     node = tree_nodes.new(type="ShaderNodeMath")
     node.name = "Math"
     node.location = (-1020.000, 40.000)
@@ -707,11 +709,6 @@ def create_mega_mini_custom_geo_node_group(node_group_name):
     node.operation = "SUBTRACT"
     new_nodes["Vector Math.002"] = node
 
-    node = tree_nodes.new(type="GeometryNodeInputPosition")
-    node.name = "Position"
-    node.location = (-1680.000, 100.000)
-    new_nodes["Position"] = node
-
     node = tree_nodes.new(type="ShaderNodeVectorMath")
     node.name = "Vector Math.001"
     node.location = (-300.000, 180.000)
@@ -724,12 +721,6 @@ def create_mega_mini_custom_geo_node_group(node_group_name):
     node.operation = "POWER"
     node.use_clamp = False
     new_nodes["Math.001"] = node
-
-    node = tree_nodes.new(type="ShaderNodeVectorMath")
-    node.name = "Vector Math.005"
-    node.location = (-1720.000, -100.000)
-    node.operation = "MULTIPLY"
-    new_nodes["Vector Math.005"] = node
 
     node = tree_nodes.new(type="ShaderNodeMath")
     node.name = "Math.002"
@@ -751,16 +742,21 @@ def create_mega_mini_custom_geo_node_group(node_group_name):
     node.operation = "DIVIDE"
     new_nodes["Vector Math.003"] = node
 
-    node = tree_nodes.new(type="NodeGroupInput")
-    node.name = "Group Input"
-    node.location = (-1920.000, -220.000)
-    new_nodes["Group Input"] = node
-
     node = tree_nodes.new(type="ShaderNodeVectorMath")
     node.name = "Vector Math.004"
     node.location = (120.000, -120.000)
     node.operation = "ADD"
     new_nodes["Vector Math.004"] = node
+
+    node = tree_nodes.new(type="NodeGroupInput")
+    node.name = "Group Input"
+    node.location = (-2560.841, -245.553)
+    new_nodes["Group Input"] = node
+
+    node = tree_nodes.new(type="GeometryNodeInputPosition")
+    node.name = "Position"
+    node.location = (-2513.642, 158.256)
+    new_nodes["Position"] = node
 
     node = tree_nodes.new(type="ShaderNodeVectorMath")
     node.name = "Vector Math.006"
@@ -768,15 +764,58 @@ def create_mega_mini_custom_geo_node_group(node_group_name):
     node.operation = "SUBTRACT"
     new_nodes["Vector Math.006"] = node
 
-    node = tree_nodes.new(type="GeometryNodeSetPosition")
-    node.name = "Set Position.001"
-    node.location = (510.702, -273.721)
-    new_nodes["Set Position.001"] = node
-
     node = tree_nodes.new(type="NodeGroupOutput")
     node.name = "Group Output"
-    node.location = (708.626, -316.601)
+    node.location = (1370.331, -337.220)
     new_nodes["Group Output"] = node
+
+    node = tree_nodes.new(type="GeometryNodeSetPosition")
+    node.name = "Set Position.001"
+    node.location = (1144.397, -353.149)
+    new_nodes["Set Position.001"] = node
+
+    node = tree_nodes.new(type="ShaderNodeVectorRotate")
+    node.name = "Vector Rotate"
+    node.location = (-2319.478, 160.825)
+    node.rotation_type = 'EULER_XYZ'
+    new_nodes["Vector Rotate"] = node
+
+    node = tree_nodes.new(type="ShaderNodeVectorMath")
+    node.name = "Vector Math.010"
+    node.location = (-2104.590, 77.569)
+    node.operation = "MULTIPLY"
+    new_nodes["Vector Math.010"] = node
+
+    node = tree_nodes.new(type="ShaderNodeVectorMath")
+    node.name = "Vector Math.007"
+    node.location = (-1917.427, 60.802)
+    node.operation = "ADD"
+    new_nodes["Vector Math.007"] = node
+
+    node = tree_nodes.new(type="ShaderNodeVectorMath")
+    node.name = "Vector Math.005"
+    node.location = (-1645.522, -67.909)
+    node.operation = "MULTIPLY"
+    new_nodes["Vector Math.005"] = node
+
+    node = tree_nodes.new(type="ShaderNodeVectorRotate")
+    node.name = "Vector Rotate.001"
+    node.location = (919.429, -246.580)
+    node.rotation_type = 'EULER_XYZ'
+    node.invert = True
+    new_nodes["Vector Rotate.001"] = node
+
+    node = tree_nodes.new(type="ShaderNodeVectorMath")
+    node.name = "Vector Math.008"
+    node.location = (523.092, -198.372)
+    node.operation = "SUBTRACT"
+    new_nodes["Vector Math.008"] = node
+
+    node = tree_nodes.new(type="ShaderNodeVectorMath")
+    node.name = "Vector Math.009"
+    node.location = (725.087, -251.178)
+    node.operation = "DIVIDE"
+    new_nodes["Vector Math.009"] = node
 
     # links between nodes
     new_links = []
@@ -807,13 +846,9 @@ def create_mega_mini_custom_geo_node_group(node_group_name):
     new_links.append(link)
     link = tree_links.new(new_nodes["Vector Math.002"].outputs[0], new_nodes["Vector Math.001"].inputs[0])
     new_links.append(link)
-    link = tree_links.new(new_nodes["Position"].outputs[0], new_nodes["Vector Math.002"].inputs[0])
-    new_links.append(link)
     link = tree_links.new(new_nodes["Vector Math.001"].outputs[0], new_nodes["Vector Math.003"].inputs[0])
     new_links.append(link)
     link = tree_links.new(new_nodes["Vector Math.003"].outputs[0], new_nodes["Vector Math.004"].inputs[0])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector Math.006"].outputs[0], new_nodes["Set Position.001"].inputs[2])
     new_links.append(link)
     link = tree_links.new(new_nodes["Vector Math.005"].outputs[0], new_nodes["Vector Math.002"].inputs[1])
     new_links.append(link)
@@ -823,10 +858,38 @@ def create_mega_mini_custom_geo_node_group(node_group_name):
     new_links.append(link)
     link = tree_links.new(new_nodes["Group Input"].outputs[1], new_nodes["Vector Math.006"].inputs[1])
     new_links.append(link)
+    link = tree_links.new(new_nodes["Position"].outputs[0], new_nodes["Vector Rotate"].inputs[0])
+    new_links.append(link)
+    link = tree_links.new(new_nodes["Vector Rotate.001"].outputs[0], new_nodes["Set Position.001"].inputs[2])
+    new_links.append(link)
+    link = tree_links.new(new_nodes["Group Input"].outputs[7], new_nodes["Vector Rotate"].inputs[4])
+    new_links.append(link)
+    link = tree_links.new(new_nodes["Group Input"].outputs[7], new_nodes["Vector Rotate.001"].inputs[4])
+    new_links.append(link)
+    link = tree_links.new(new_nodes["Group Input"].outputs[6], new_nodes["Vector Math.007"].inputs[1])
+    new_links.append(link)
+    link = tree_links.new(new_nodes["Vector Math.007"].outputs[0], new_nodes["Vector Math.002"].inputs[0])
+    new_links.append(link)
+    link = tree_links.new(new_nodes["Group Input"].outputs[6], new_nodes["Vector Math.008"].inputs[1])
+    new_links.append(link)
+    link = tree_links.new(new_nodes["Vector Math.006"].outputs[0], new_nodes["Vector Math.008"].inputs[0])
+    new_links.append(link)
+    link = tree_links.new(new_nodes["Group Input"].outputs[8], new_nodes["Vector Math.009"].inputs[1])
+    new_links.append(link)
+    link = tree_links.new(new_nodes["Group Input"].outputs[8], new_nodes["Vector Math.010"].inputs[1])
+    new_links.append(link)
+    link = tree_links.new(new_nodes["Vector Rotate"].outputs[0], new_nodes["Vector Math.010"].inputs[0])
+    new_links.append(link)
+    link = tree_links.new(new_nodes["Vector Math.010"].outputs[0], new_nodes["Vector Math.007"].inputs[0])
+    new_links.append(link)
+    link = tree_links.new(new_nodes["Vector Math.008"].outputs[0], new_nodes["Vector Math.009"].inputs[0])
+    new_links.append(link)
+    link = tree_links.new(new_nodes["Vector Math.009"].outputs[0], new_nodes["Vector Rotate.001"].inputs[0])
+    new_links.append(link)
 
     return new_node_group
 
-def add_mega_mini_to_geo_node_group(existing_group_name, clear_node_tree, mega_mini_rig, mega_mini_rig_bone):
+def add_mega_mini_to_geo_node_group(existing_group_name, clear_node_tree, mega_mini_rig, mega_mini_rig_bone, attached_obj):
     existing_node_group = bpy.data.node_groups.get(existing_group_name)
     tree_nodes = existing_node_group.nodes
     # if needed, delete old nodes (clear tree) before adding new nodes
@@ -967,7 +1030,7 @@ def add_mega_mini_to_geo_node_group(existing_group_name, clear_node_tree, mega_m
     v_place_scale_x.type = 'TRANSFORMS'
     v_place_scale_x.name = "var"
     v_place_scale_x.targets[0].id = mega_mini_rig
-    v_place_scale_x.targets[0].bone_target = PLACE_BNAME
+    v_place_scale_x.targets[0].bone_target = mega_mini_rig_bone
     v_place_scale_x.targets[0].transform_type = 'SCALE_X'
     v_place_scale_x.targets[0].transform_space = 'TRANSFORM_SPACE'
     v_place_scale_x.targets[0].data_path = "scale.x"
@@ -978,7 +1041,7 @@ def add_mega_mini_to_geo_node_group(existing_group_name, clear_node_tree, mega_m
     v_place_scale_y.type = 'TRANSFORMS'
     v_place_scale_y.name = "var"
     v_place_scale_y.targets[0].id = mega_mini_rig
-    v_place_scale_y.targets[0].bone_target = PLACE_BNAME
+    v_place_scale_y.targets[0].bone_target = mega_mini_rig_bone
     v_place_scale_y.targets[0].transform_type = 'SCALE_Y'
     v_place_scale_y.targets[0].transform_space = 'TRANSFORM_SPACE'
     v_place_scale_y.targets[0].data_path = "scale.y"
@@ -989,13 +1052,127 @@ def add_mega_mini_to_geo_node_group(existing_group_name, clear_node_tree, mega_m
     v_place_scale_z.type = 'TRANSFORMS'
     v_place_scale_z.name = "var"
     v_place_scale_z.targets[0].id = mega_mini_rig
-    v_place_scale_z.targets[0].bone_target = PLACE_BNAME
+    v_place_scale_z.targets[0].bone_target = mega_mini_rig_bone
     v_place_scale_z.targets[0].transform_type = 'SCALE_Z'
     v_place_scale_z.targets[0].transform_space = 'TRANSFORM_SPACE'
     v_place_scale_z.targets[0].data_path = "scale.z"
     drv_place_scale_z.expression = v_place_scale_z.name
-    # finished adding drivers for Place location
+    # finished adding drivers for Place scale
     new_nodes["Vector.001"] = node
+
+    node = tree_nodes.new(type="FunctionNodeInputVector")
+    node.name = "Vector.003"
+    node.label = "Object Loc"
+    node.location = (120.000, -860.000)
+    # add drivers to get object location
+    # Object location X
+    drv_attached_obj_loc_x = node.driver_add('vector', 0).driver
+    v_attached_obj_loc_x = drv_attached_obj_loc_x.variables.new()
+    v_attached_obj_loc_x.type = 'TRANSFORMS'
+    v_attached_obj_loc_x.name = "var"
+    v_attached_obj_loc_x.targets[0].id = attached_obj
+    v_attached_obj_loc_x.targets[0].transform_type = 'LOC_X'
+    v_attached_obj_loc_x.targets[0].transform_space = 'LOCAL_SPACE'
+    v_attached_obj_loc_x.targets[0].data_path = "location.x"
+    drv_attached_obj_loc_x.expression = v_attached_obj_loc_x.name
+    # Object location Y
+    drv_attached_obj_loc_y = node.driver_add('vector', 1).driver
+    v_attached_obj_loc_y = drv_attached_obj_loc_y.variables.new()
+    v_attached_obj_loc_y.type = 'TRANSFORMS'
+    v_attached_obj_loc_y.name = "var"
+    v_attached_obj_loc_y.targets[0].id = attached_obj
+    v_attached_obj_loc_y.targets[0].transform_type = 'LOC_Y'
+    v_attached_obj_loc_y.targets[0].transform_space = 'LOCAL_SPACE'
+    v_attached_obj_loc_y.targets[0].data_path = "location.y"
+    drv_attached_obj_loc_y.expression = v_attached_obj_loc_y.name+" - " + str(PLACE_BONETAIL[1])
+    # Object location Z
+    drv_attached_obj_loc_z = node.driver_add('vector', 2).driver
+    v_attached_obj_loc_z = drv_attached_obj_loc_z.variables.new()
+    v_attached_obj_loc_z.type = 'TRANSFORMS'
+    v_attached_obj_loc_z.name = "var"
+    v_attached_obj_loc_z.targets[0].id = attached_obj
+    v_attached_obj_loc_z.targets[0].transform_type = 'LOC_Z'
+    v_attached_obj_loc_z.targets[0].transform_space = 'LOCAL_SPACE'
+    v_attached_obj_loc_z.targets[0].data_path = "location.z"
+    drv_attached_obj_loc_z.expression = v_attached_obj_loc_z.name
+    # finished adding drivers for Object location
+    new_nodes["Vector.003"] = node
+
+    node = tree_nodes.new(type="FunctionNodeInputVector")
+    node.name = "Vector.004"
+    node.label = "Object Rot"
+    node.location = (120.000, -1000.000)
+    # add drivers to get object rotation
+    # Object rotation Euler X
+    drv_attached_obj_rot_x = node.driver_add('vector', 0).driver
+    v_attached_obj_rot_x = drv_attached_obj_rot_x.variables.new()
+    v_attached_obj_rot_x.type = 'TRANSFORMS'
+    v_attached_obj_rot_x.name = "var"
+    v_attached_obj_rot_x.targets[0].id = attached_obj
+    v_attached_obj_rot_x.targets[0].transform_type = 'ROT_X'
+    v_attached_obj_rot_x.targets[0].transform_space = 'LOCAL_SPACE'
+    v_attached_obj_rot_x.targets[0].data_path = "rotation.x"
+    drv_attached_obj_rot_x.expression = v_attached_obj_rot_x.name
+    # Object rotation Euler Y
+    drv_attached_obj_rot_y = node.driver_add('vector', 1).driver
+    v_attached_obj_rot_y = drv_attached_obj_rot_y.variables.new()
+    v_attached_obj_rot_y.type = 'TRANSFORMS'
+    v_attached_obj_rot_y.name = "var"
+    v_attached_obj_rot_y.targets[0].id = attached_obj
+    v_attached_obj_rot_y.targets[0].transform_type = 'ROT_Y'
+    v_attached_obj_rot_y.targets[0].transform_space = 'LOCAL_SPACE'
+    v_attached_obj_rot_y.targets[0].data_path = "rotation.y"
+    drv_attached_obj_rot_y.expression = v_attached_obj_rot_y.name
+    # Object rotation Euler Z
+    drv_attached_obj_rot_z = node.driver_add('vector', 2).driver
+    v_attached_obj_rot_z = drv_attached_obj_rot_z.variables.new()
+    v_attached_obj_rot_z.type = 'TRANSFORMS'
+    v_attached_obj_rot_z.name = "var"
+    v_attached_obj_rot_z.targets[0].id = attached_obj
+    v_attached_obj_rot_z.targets[0].transform_type = 'ROT_Z'
+    v_attached_obj_rot_z.targets[0].transform_space = 'LOCAL_SPACE'
+    v_attached_obj_rot_z.targets[0].data_path = "rotation.z"
+    drv_attached_obj_rot_z.expression = v_attached_obj_rot_z.name
+    # finished adding drivers for Object rotation
+    new_nodes["Vector.004"] = node
+
+    node = tree_nodes.new(type="FunctionNodeInputVector")
+    node.name = "Vector.005"
+    node.label = "Object Scale"
+    node.location = (120.000, -1120.000)
+    # add drivers to get object scale
+    # Object scale X
+    drv_attached_obj_scl_x = node.driver_add('vector', 0).driver
+    v_attached_obj_scl_x = drv_attached_obj_scl_x.variables.new()
+    v_attached_obj_scl_x.type = 'TRANSFORMS'
+    v_attached_obj_scl_x.name = "var"
+    v_attached_obj_scl_x.targets[0].id = attached_obj
+    v_attached_obj_scl_x.targets[0].transform_type = 'SCALE_X'
+    v_attached_obj_scl_x.targets[0].transform_space = 'TRANSFORM_SPACE'
+    v_attached_obj_scl_x.targets[0].data_path = "scale.x"
+    drv_attached_obj_scl_x.expression = v_attached_obj_scl_x.name
+    # Object scale Y
+    drv_attached_obj_scl_y = node.driver_add('vector', 1).driver
+    v_attached_obj_scl_y = drv_attached_obj_scl_y.variables.new()
+    v_attached_obj_scl_y.type = 'TRANSFORMS'
+    v_attached_obj_scl_y.name = "var"
+    v_attached_obj_scl_y.targets[0].id = attached_obj
+    v_attached_obj_scl_y.targets[0].transform_type = 'SCALE_Y'
+    v_attached_obj_scl_y.targets[0].transform_space = 'TRANSFORM_SPACE'
+    v_attached_obj_scl_y.targets[0].data_path = "scale.y"
+    drv_attached_obj_scl_y.expression = v_attached_obj_scl_y.name
+    # Object scale Z
+    drv_attached_obj_scl_z = node.driver_add('vector', 2).driver
+    v_attached_obj_scl_z = drv_attached_obj_scl_z.variables.new()
+    v_attached_obj_scl_z.type = 'TRANSFORMS'
+    v_attached_obj_scl_z.name = "var"
+    v_attached_obj_scl_z.targets[0].id = attached_obj
+    v_attached_obj_scl_z.targets[0].transform_type = 'SCALE_Z'
+    v_attached_obj_scl_z.targets[0].transform_space = 'TRANSFORM_SPACE'
+    v_attached_obj_scl_z.targets[0].data_path = "scale.z"
+    drv_attached_obj_scl_z.expression = v_attached_obj_scl_z.name
+    # finished adding drivers for Object scale
+    new_nodes["Vector.005"] = node
 
     node = tree_nodes.new(type="NodeGroupOutput")
     node.name = "Group Output"
@@ -1026,9 +1203,15 @@ def add_mega_mini_to_geo_node_group(existing_group_name, clear_node_tree, mega_m
     new_links.append(link)
     link = tree_links.new(new_nodes["Vector.002"].outputs[0], new_nodes["Group"].inputs[2])
     new_links.append(link)
+    link = tree_links.new(new_nodes["Vector.003"].outputs[0], new_nodes["Group"].inputs[6])
+    new_links.append(link)
+    link = tree_links.new(new_nodes["Vector.004"].outputs[0], new_nodes["Group"].inputs[7])
+    new_links.append(link)
+    link = tree_links.new(new_nodes["Vector.005"].outputs[0], new_nodes["Group"].inputs[8])
+    new_links.append(link)
 
 def add_mega_mini_nodes_to_node_group(existing_group_name, override_create, clear_node_tree, mega_mini_rig,
-                                      mega_mini_rig_bone):
+                                      mega_mini_rig_bone, attached_obj):
     # check if custom node group already exists, and create/override if necessary
     node_group = bpy.data.node_groups.get(MEGA_MINI_CUSTOM_NODE_GROUP_NAME)
     if node_group is None or override_create:
@@ -1039,7 +1222,7 @@ def add_mega_mini_nodes_to_node_group(existing_group_name, override_create, clea
         if override_create:
             new_node_group.name = MEGA_MINI_CUSTOM_NODE_GROUP_NAME
 
-    add_mega_mini_to_geo_node_group(existing_group_name, clear_node_tree, mega_mini_rig, mega_mini_rig_bone)
+    add_mega_mini_to_geo_node_group(existing_group_name, clear_node_tree, mega_mini_rig, mega_mini_rig_bone, attached_obj)
 
 def add_mega_mini_geo_nodes_to_object(ob, override_create, alt_group_name, mega_mini_rig, mega_mini_rig_bone):
     geo_nodes_mod = ob.modifiers.new(name="MegaMini.GeometryNodes", type='NODES')
@@ -1048,12 +1231,12 @@ def add_mega_mini_geo_nodes_to_object(ob, override_create, alt_group_name, mega_
         if bpy.data.node_groups.get(alt_group_name) is None:
             return  # TODO return error / throw exception
         # create nodes, but don't clear node tree before creating new nodes
-        add_mega_mini_nodes_to_node_group(alt_group_name, override_create, False, mega_mini_rig, mega_mini_rig_bone)
+        add_mega_mini_nodes_to_node_group(alt_group_name, override_create, False, mega_mini_rig, mega_mini_rig_bone, ob)
         geo_nodes_mod.node_group = bpy.data.node_groups.get(alt_group_name)
         return  # success, return
     # create nodes, and clear node tree before creating new nodes
     add_mega_mini_nodes_to_node_group(geo_nodes_mod.node_group.name, override_create, True, mega_mini_rig,
-                                      mega_mini_rig_bone)
+                                      mega_mini_rig_bone, ob)
 
 class MEGAMINI_AddGeoNodes(bpy.types.Operator):
     bl_description = "Add Geometry Nodes to selected object(s). Object(s) must already be attached to MegaMini Rig "+\
