@@ -36,6 +36,8 @@ PLACE_BNAME = "Place"
 
 OBJ_PROP_SCALE = "mega_mini_scale"
 OBJ_PROP_FP_POWER = "mega_mini_fp_power"
+OBJ_PROP_FP_MIN_DIST = "mega_mini_fp_min_dist"
+OBJ_PROP_FP_MIN_SCALE = "mega_mini_fp_min_scale"
 OBJ_PROP_BONE_SCL_MULT = "mega_mini_bone_scl_mult"
 
 PROXY_FIELD_BONEHEAD = (0, 0, 0)
@@ -226,7 +228,8 @@ def add_bconst_scl_influence_driver(mega_mini_rig, proxy_obs_bconst):
 #     - 'Field' is the mega_mini_rig itself, 'ProxyField' is intended to be like a 'TV remote controller',
 #       easy to pick up and move around in the scene, without modifying the positions of objects in the rig
 #     - 'ProxyField' is a Scaled Remote Controller for an Actual World of objects
-def create_mega_mini_armature(context, mega_mini_scale, mega_mini_fp_power):
+def create_mega_mini_armature(context, mega_mini_scale, mega_mini_fp_power, mega_mini_fp_min_dist,
+                              mega_mini_fp_min_scale):
     widget_objs = create_mege_mini_widgets(context)
 
     old_3dview_mode = context.mode
@@ -238,6 +241,8 @@ def create_mega_mini_armature(context, mega_mini_scale, mega_mini_fp_power):
     mega_mini_rig.name = RIG_BASENAME
     mega_mini_rig[OBJ_PROP_SCALE] = mega_mini_scale
     mega_mini_rig[OBJ_PROP_FP_POWER] = mega_mini_fp_power
+    mega_mini_rig[OBJ_PROP_FP_MIN_DIST] = mega_mini_fp_min_dist
+    mega_mini_rig[OBJ_PROP_FP_MIN_SCALE] = mega_mini_fp_min_scale
     # ensure mega_mini_rig will display custom bone shapes
     mega_mini_rig.data.show_bone_custom_shapes = True
     # modify default bone to make ProxyField bone, to hold proxies for observer(s) and actual place(s)
@@ -314,10 +319,13 @@ class MEGAMINI_CreateMegaMiniRig(bpy.types.Operator):
     def execute(self, context):
         mega_mini_scale = context.scene.MegaMini_NewObserverScale
         mega_mini_fp_power = context.scene.MegaMini_NewObserverFP_Power
+        mega_mini_fp_min_dist = context.scene.MegaMini_NewObserverFP_MinDist
+        mega_mini_fp_min_scale = context.scene.MegaMini_NewObserverFP_MinScale
         if mega_mini_scale <= 0:
             self.report({'ERROR'}, "Error in new Observer scale. Must be above zero.")
             return {'CANCELLED'}
-        create_mega_mini_armature(context, mega_mini_scale, mega_mini_fp_power)
+        create_mega_mini_armature(context, mega_mini_scale, mega_mini_fp_power, mega_mini_fp_min_dist,
+                                  mega_mini_fp_min_scale)
         return {'FINISHED'}
 
 # "edit bones" must be created at origin (head at origin, ...), so that pose bone locations can be used by drivers
@@ -393,10 +401,10 @@ def add_bone_scl_drivers(armature, place_bname, proxy_place_focus_bname, proxy_o
     v_proxy_dist.name                 = "proxy_dist"
     v_proxy_dist.targets[0].id        = armature
     v_proxy_dist.targets[0].bone_target        = proxy_place_focus_bname
-    v_proxy_dist.targets[0].transform_space = 'WORLD_SPACE'
+    v_proxy_dist.targets[0].transform_space = 'LOCAL_SPACE' # TEST: old value was WORLD_SPACE
     v_proxy_dist.targets[1].id        = armature
     v_proxy_dist.targets[1].bone_target        = proxy_observer_bname
-    v_proxy_dist.targets[1].transform_space = 'WORLD_SPACE'
+    v_proxy_dist.targets[1].transform_space = 'LOCAL_SPACE' # TEST: old value was WORLD_SPACE
 
     v_mega_mini_scale = drv_scale_x.variables.new()
     v_mega_mini_scale.type = 'SINGLE_PROP'
@@ -410,18 +418,28 @@ def add_bone_scl_drivers(armature, place_bname, proxy_place_focus_bname, proxy_o
     v_mega_mini_fp_power.targets[0].id        = armature
     v_mega_mini_fp_power.targets[0].data_path = "[\""+OBJ_PROP_FP_POWER+"\"]"
 
+    v_mega_mini_fp_min_dist = drv_scale_x.variables.new()
+    v_mega_mini_fp_min_dist.type = 'SINGLE_PROP'
+    v_mega_mini_fp_min_dist.name                 = "mega_mini_fp_min_dist"
+    v_mega_mini_fp_min_dist.targets[0].id        = armature
+    v_mega_mini_fp_min_dist.targets[0].data_path = "[\""+OBJ_PROP_FP_MIN_DIST+"\"]"
+
+    v_mega_mini_fp_min_scale = drv_scale_x.variables.new()
+    v_mega_mini_fp_min_scale.type = 'SINGLE_PROP'
+    v_mega_mini_fp_min_scale.name                 = "mega_mini_fp_min_scale"
+    v_mega_mini_fp_min_scale.targets[0].id        = armature
+    v_mega_mini_fp_min_scale.targets[0].data_path = "[\""+OBJ_PROP_FP_MIN_SCALE+"\"]"
+
     v_self_bone_scale = drv_scale_x.variables.new()
     v_self_bone_scale.type = 'SINGLE_PROP'
     v_self_bone_scale.name                 = "self_bone_scale"
     v_self_bone_scale.targets[0].id        = armature
     v_self_bone_scale.targets[0].data_path = "pose.bones[\""+place_bname+"\"][\""+OBJ_PROP_BONE_SCL_MULT+"\"]"
 
-    # Actual's forced perspective scaling value equals
-    #     1 over
-    #         1 plus distance from ProxyObserver to ProxyPlaceFocus
-    #             to the power of "forced perspective power" value (usually 0.5 - meaning: take square root)
-    drv_scale_x.expression = v_self_bone_scale.name+" / ( (1 + "+v_mega_mini_scale.name+" * "+v_proxy_dist.name + \
-        ") ** "+v_mega_mini_fp_power.name+")"
+    # MegaMini distance scaling formula:
+    drv_scale_x.expression = "max("+v_mega_mini_fp_min_scale.name+", "+v_self_bone_scale.name+" / ( (1 + max(0, " + \
+        v_mega_mini_scale.name+" * "+v_proxy_dist.name+" - "+v_mega_mini_fp_min_dist.name+") ) ** " + \
+        v_mega_mini_fp_power.name+") )"
 
     # Y scale is copy of X scale value
     drv_scale_y = armature.pose.bones[place_bname].driver_add('scale', 1).driver
@@ -683,6 +701,9 @@ def create_mega_mini_custom_geo_node_group(node_group_name):
     new_node_group = bpy.data.node_groups.new(name=node_group_name, type='GeometryNodeTree')
     new_node_group.inputs.new(type='NodeSocketGeometry', name="Geometry")
     new_node_group.inputs.new(type='NodeSocketFloat', name="MegaMini FP Power")
+    new_node_group.inputs.new(type='NodeSocketFloat', name="MegaMini FP Min Dist")
+    new_node_group.inputs.new(type='NodeSocketFloat', name="MegaMini FP Min Scale")
+    new_node_group.inputs.new(type='NodeSocketFloat', name="Place Scale Mult")
     new_node_group.inputs.new(type='NodeSocketVector', name="Place Loc")
     new_node_group.inputs.new(type='NodeSocketVectorEuler', name="Place Rot")
     new_node_group.inputs.new(type='NodeSocketVector', name="Place Scale")
@@ -694,31 +715,11 @@ def create_mega_mini_custom_geo_node_group(node_group_name):
     # delete old nodes before adding new nodes
     tree_nodes.clear()
 
-    node = tree_nodes.new(type="NodeGroupInput")
-    node.name = "Group Input"
-    node.location = (-2535.503, -318.066)
-    new_nodes["Group Input"] = node
-
-    node = tree_nodes.new(type="GeometryNodeSetPosition")
-    node.name = "Set Position"
-    node.location = (1067.827, -496.957)
-    new_nodes["Set Position"] = node
-
-    node = tree_nodes.new(type="NodeGroupOutput")
-    node.name = "Group Output"
-    node.location = (1284.390, -542.031)
-    new_nodes["Group Output"] = node
-
+    # material shader nodes
     node = tree_nodes.new(type="GeometryNodeInputPosition")
     node.name = "Position"
     node.location = (-2534.777, 74.858)
     new_nodes["Position"] = node
-
-    node = tree_nodes.new(type="ShaderNodeVectorRotate")
-    node.name = "Vector Rotate"
-    node.location = (-2247.668, 168.238)
-    node.rotation_type = 'EULER_XYZ'
-    new_nodes["Vector Rotate"] = node
 
     node = tree_nodes.new(type="ShaderNodeVectorMath")
     node.name = "Vector Math"
@@ -726,12 +727,6 @@ def create_mega_mini_custom_geo_node_group(node_group_name):
     node.location = (-2043.184, 50.809)
     node.operation = "MULTIPLY_ADD"
     new_nodes["Vector Math"] = node
-
-    node = tree_nodes.new(type="ShaderNodeVectorRotate")
-    node.name = "Vector Rotate.001"
-    node.location = (-1721.789, 160.883)
-    node.rotation_type = 'EULER_XYZ'
-    new_nodes["Vector Rotate.001"] = node
 
     node = tree_nodes.new(type="ShaderNodeVectorMath")
     node.name = "Vector Math.001"
@@ -746,151 +741,216 @@ def create_mega_mini_custom_geo_node_group(node_group_name):
     node.operation = "ADD"
     new_nodes["Vector Math.002"] = node
 
+    node = tree_nodes.new(type="ShaderNodeVectorRotate")
+    node.name = "Vector Rotate.001"
+    node.location = (-1721.789, 153.802)
+    node.rotation_type = 'EULER_XYZ'
+    new_nodes["Vector Rotate.001"] = node
+
+    node = tree_nodes.new(type="ShaderNodeVectorRotate")
+    node.name = "Vector Rotate"
+    node.location = (-2247.668, 152.054)
+    node.rotation_type = 'EULER_XYZ'
+    new_nodes["Vector Rotate"] = node
+
+    node = tree_nodes.new(type="ShaderNodeMath")
+    node.name = "Math.004"
+    node.location = (-832.964, -45.681)
+    node.operation = "GREATER_THAN"
+    node.inputs[1].default_value = 0.0
+    new_nodes["Math.004"] = node
+
     node = tree_nodes.new(type="ShaderNodeMath")
     node.name = "Math"
-    node.location = (-1024.893, -20.003)
+    node.location = (-475.355, -30.122)
     node.operation = "ADD"
-    node.use_clamp = False
     node.inputs[1].default_value = 1.0
     new_nodes["Math"] = node
 
-    node = tree_nodes.new(type="ShaderNodeMath")
-    node.name = "Math.001"
-    node.location = (-857.252, -68.566)
-    node.operation = "POWER"
-    node.use_clamp = False
-    new_nodes["Math.001"] = node
+    node = tree_nodes.new(type="ShaderNodeVectorMath")
+    node.name = "Vector Math.003"
+    node.location = (-1188.033, -36.604)
+    node.operation = "LENGTH"
+    new_nodes["Vector Math.003"] = node
 
     node = tree_nodes.new(type="ShaderNodeMath")
-    node.name = "Math.002"
-    node.location = (-681.155, -36.315)
-    node.operation = "DIVIDE"
-    node.use_clamp = False
-    node.inputs[0].default_value = 1.0
-    new_nodes["Math.002"] = node
+    node.name = "Math.003"
+    node.location = (-1016.144, -40.858)
+    node.operation = "SUBTRACT"
+    new_nodes["Math.003"] = node
+
+    node = tree_nodes.new(type="NodeGroupInput")
+    node.name = "Group Input"
+    node.location = (-2535.503, -279.211)
+    new_nodes["Group Input"] = node
+
+    node = tree_nodes.new(type="ShaderNodeMath")
+    node.name = "Math.005"
+    node.label = "Min Length is Zero"
+    node.location = (-651.340, -40.858)
+    node.operation = "MULTIPLY"
+    new_nodes["Math.005"] = node
+
+    node = tree_nodes.new(type="ShaderNodeMath")
+    node.name = "Math.009"
+    node.location = (319.077, -24.317)
+    node.operation = "MULTIPLY"
+    new_nodes["Math.009"] = node
 
     node = tree_nodes.new(type="ShaderNodeVectorMath")
     node.name = "Vector Math.004"
     node.label = "Do Forced Perspective Transform"
-    node.location = (-503.043, 96.630)
+    node.location = (961.067, 81.665)
     node.operation = "MULTIPLY"
     new_nodes["Vector Math.004"] = node
 
     node = tree_nodes.new(type="ShaderNodeVectorMath")
-    node.name = "Vector Math.003"
-    node.location = (-1195.111, -36.604)
-    node.operation = "LENGTH"
-    new_nodes["Vector Math.003"] = node
-
-    node = tree_nodes.new(type="ShaderNodeVectorMath")
-    node.name = "Vector Math.005"
-    node.location = (-239.050, -114.273)
-    node.operation = "SUBTRACT"
-    new_nodes["Vector Math.005"] = node
-
-    node = tree_nodes.new(type="ShaderNodeVectorRotate")
-    node.name = "Vector Rotate.002"
-    node.label = "Undo Place Transform"
-    node.location = (113.433, -175.697)
-    node.rotation_type = 'EULER_XYZ'
-    node.invert = True
-    new_nodes["Vector Rotate.002"] = node
-
-    node = tree_nodes.new(type="ShaderNodeVectorMath")
-    node.name = "Vector Math.007"
-    node.location = (430.440, -336.309)
-    node.operation = "SUBTRACT"
-    new_nodes["Vector Math.007"] = node
-
-    node = tree_nodes.new(type="ShaderNodeVectorMath")
     node.name = "Vector Math.006"
-    node.location = (-52.670, -170.946)
+    node.location = (1356.324, -343.237)
     node.operation = "DIVIDE"
     new_nodes["Vector Math.006"] = node
 
-    node = tree_nodes.new(type="ShaderNodeVectorRotate")
-    node.name = "Vector Rotate.003"
-    node.location = (619.573, -275.740)
-    node.rotation_type = 'EULER_XYZ'
-    node.invert = True
-    new_nodes["Vector Rotate.003"] = node
+    node = tree_nodes.new(type="ShaderNodeVectorMath")
+    node.name = "Vector Math.005"
+    node.location = (1180.055, -290.610)
+    node.operation = "SUBTRACT"
+    new_nodes["Vector Math.005"] = node
 
     node = tree_nodes.new(type="ShaderNodeVectorMath")
     node.name = "Vector Math.008"
     node.label = "Undo Object Transform"
-    node.location = (826.542, -363.052)
+    node.location = (2209.247, -506.677)
     node.operation = "DIVIDE"
     new_nodes["Vector Math.008"] = node
 
+    node = tree_nodes.new(type="ShaderNodeVectorRotate")
+    node.name = "Vector Rotate.003"
+    node.location = (2026.545, -371.823)
+    node.rotation_type = 'EULER_XYZ'
+    node.invert = True
+    new_nodes["Vector Rotate.003"] = node
+
+    node = tree_nodes.new(type="ShaderNodeVectorRotate")
+    node.name = "Vector Rotate.002"
+    node.label = "Undo Place Transform"
+    node.location = (1528.493, -284.125)
+    node.rotation_type = 'EULER_XYZ'
+    node.invert = True
+    new_nodes["Vector Rotate.002"] = node
+
+    node = tree_nodes.new(type="NodeGroupOutput")
+    node.name = "Group Output"
+    node.location = (2668.001, -498.944)
+    new_nodes["Group Output"] = node
+
+    node = tree_nodes.new(type="ShaderNodeVectorMath")
+    node.name = "Vector Math.007"
+    node.location = (1839.433, -432.392)
+    node.operation = "SUBTRACT"
+    new_nodes["Vector Math.007"] = node
+
+    node = tree_nodes.new(type="GeometryNodeSetPosition")
+    node.name = "Set Position"
+    node.location = (2476.821, -593.040)
+    new_nodes["Set Position"] = node
+
+    node = tree_nodes.new(type="ShaderNodeMath")
+    node.name = "Math.002"
+    node.location = (-413.915, -193.300)
+    node.operation = "MULTIPLY"
+    node.inputs[1].default_value = -1.0
+    new_nodes["Math.002"] = node
+
+    node = tree_nodes.new(type="ShaderNodeMath")
+    node.name = "Math.010"
+    node.location = (135.382, -163.915)
+    node.operation = "SUBTRACT"
+    node.inputs[0].default_value = 1.0
+    new_nodes["Math.010"] = node
+
+    node = tree_nodes.new(type="ShaderNodeMath")
+    node.name = "Math.007"
+    node.location = (317.717, -193.268)
+    node.operation = "MULTIPLY"
+    new_nodes["Math.007"] = node
+
+    node = tree_nodes.new(type="ShaderNodeMath")
+    node.name = "Math.008"
+    node.label = "Apply Min Scale"
+    node.location = (504.154, -44.231)
+    node.operation = "ADD"
+    new_nodes["Math.008"] = node
+
+    node = tree_nodes.new(type="ShaderNodeMath")
+    node.name = "Math.006"
+    node.location = (-48.155, -106.849)
+    node.operation = "GREATER_THAN"
+    new_nodes["Math.006"] = node
+
+    node = tree_nodes.new(type="ShaderNodeMath")
+    node.name = "Math.001"
+    node.location = (-241.997, -71.783)
+    node.operation = "POWER"
+    new_nodes["Math.001"] = node
+
+    node = tree_nodes.new(type="ShaderNodeMath")
+    node.name = "Math.011"
+    node.label = "Apply Place Scale Mult"
+    node.location = (703.545, -228.002)
+    node.operation = "MULTIPLY"
+    new_nodes["Math.011"] = node
+
     # links between nodes
-    new_links = []
     tree_links = new_node_group.links
-    link = tree_links.new(new_nodes["Group Input"].outputs[0], new_nodes["Set Position"].inputs[0])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Set Position"].outputs[0], new_nodes["Group Output"].inputs[0])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Group Input"].outputs[1], new_nodes["Math.001"].inputs[1])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Math"].outputs[0], new_nodes["Math.001"].inputs[0])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Math.001"].outputs[0], new_nodes["Math.002"].inputs[1])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Position"].outputs[0], new_nodes["Vector Rotate"].inputs[0])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Group Input"].outputs[6], new_nodes["Vector Rotate"].inputs[4])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Group Input"].outputs[7], new_nodes["Vector Math"].inputs[1])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector Rotate"].outputs[0], new_nodes["Vector Math"].inputs[0])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Group Input"].outputs[5], new_nodes["Vector Math"].inputs[2])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Group Input"].outputs[2], new_nodes["Vector Math.001"].inputs[0])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Group Input"].outputs[4], new_nodes["Vector Math.001"].inputs[1])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector Math.001"].outputs[0], new_nodes["Vector Math.002"].inputs[1])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector Math.002"].outputs[0], new_nodes["Vector Math.003"].inputs[0])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector Math.002"].outputs[0], new_nodes["Vector Math.004"].inputs[0])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Math.002"].outputs[0], new_nodes["Vector Math.004"].inputs[1])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector Math.003"].outputs[1], new_nodes["Math"].inputs[0])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Group Input"].outputs[2], new_nodes["Vector Math.005"].inputs[1])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector Math.004"].outputs[0], new_nodes["Vector Math.005"].inputs[0])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Group Input"].outputs[4], new_nodes["Vector Math.006"].inputs[1])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector Math.005"].outputs[0], new_nodes["Vector Math.006"].inputs[0])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Group Input"].outputs[5], new_nodes["Vector Math.007"].inputs[1])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Group Input"].outputs[6], new_nodes["Vector Rotate.003"].inputs[4])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector Math.007"].outputs[0], new_nodes["Vector Rotate.003"].inputs[0])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Group Input"].outputs[3], new_nodes["Vector Rotate.001"].inputs[4])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector Math"].outputs[0], new_nodes["Vector Rotate.001"].inputs[0])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector Rotate.001"].outputs[0], new_nodes["Vector Math.002"].inputs[0])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Group Input"].outputs[3], new_nodes["Vector Rotate.002"].inputs[4])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector Math.006"].outputs[0], new_nodes["Vector Rotate.002"].inputs[0])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector Rotate.002"].outputs[0], new_nodes["Vector Math.007"].inputs[0])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Group Input"].outputs[7], new_nodes["Vector Math.008"].inputs[1])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector Rotate.003"].outputs[0], new_nodes["Vector Math.008"].inputs[0])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector Math.008"].outputs[0], new_nodes["Set Position"].inputs[2])
-    new_links.append(link)
+    tree_links.new(new_nodes["Group Input"].outputs[0], new_nodes["Set Position"].inputs[0])
+    tree_links.new(new_nodes["Set Position"].outputs[0], new_nodes["Group Output"].inputs[0])
+    tree_links.new(new_nodes["Math.002"].outputs[0], new_nodes["Math.001"].inputs[1])
+    tree_links.new(new_nodes["Math"].outputs[0], new_nodes["Math.001"].inputs[0])
+    tree_links.new(new_nodes["Position"].outputs[0], new_nodes["Vector Rotate"].inputs[0])
+    tree_links.new(new_nodes["Group Input"].outputs[9], new_nodes["Vector Rotate"].inputs[4])
+    tree_links.new(new_nodes["Group Input"].outputs[10], new_nodes["Vector Math"].inputs[1])
+    tree_links.new(new_nodes["Vector Rotate"].outputs[0], new_nodes["Vector Math"].inputs[0])
+    tree_links.new(new_nodes["Group Input"].outputs[8], new_nodes["Vector Math"].inputs[2])
+    tree_links.new(new_nodes["Group Input"].outputs[5], new_nodes["Vector Math.001"].inputs[0])
+    tree_links.new(new_nodes["Group Input"].outputs[7], new_nodes["Vector Math.001"].inputs[1])
+    tree_links.new(new_nodes["Vector Math.001"].outputs[0], new_nodes["Vector Math.002"].inputs[1])
+    tree_links.new(new_nodes["Vector Math.002"].outputs[0], new_nodes["Vector Math.003"].inputs[0])
+    tree_links.new(new_nodes["Group Input"].outputs[5], new_nodes["Vector Math.005"].inputs[1])
+    tree_links.new(new_nodes["Vector Math.004"].outputs[0], new_nodes["Vector Math.005"].inputs[0])
+    tree_links.new(new_nodes["Group Input"].outputs[7], new_nodes["Vector Math.006"].inputs[1])
+    tree_links.new(new_nodes["Vector Math.005"].outputs[0], new_nodes["Vector Math.006"].inputs[0])
+    tree_links.new(new_nodes["Group Input"].outputs[8], new_nodes["Vector Math.007"].inputs[1])
+    tree_links.new(new_nodes["Group Input"].outputs[9], new_nodes["Vector Rotate.003"].inputs[4])
+    tree_links.new(new_nodes["Vector Math.007"].outputs[0], new_nodes["Vector Rotate.003"].inputs[0])
+    tree_links.new(new_nodes["Group Input"].outputs[6], new_nodes["Vector Rotate.001"].inputs[4])
+    tree_links.new(new_nodes["Vector Math"].outputs[0], new_nodes["Vector Rotate.001"].inputs[0])
+    tree_links.new(new_nodes["Vector Rotate.001"].outputs[0], new_nodes["Vector Math.002"].inputs[0])
+    tree_links.new(new_nodes["Group Input"].outputs[6], new_nodes["Vector Rotate.002"].inputs[4])
+    tree_links.new(new_nodes["Vector Math.006"].outputs[0], new_nodes["Vector Rotate.002"].inputs[0])
+    tree_links.new(new_nodes["Vector Rotate.002"].outputs[0], new_nodes["Vector Math.007"].inputs[0])
+    tree_links.new(new_nodes["Group Input"].outputs[10], new_nodes["Vector Math.008"].inputs[1])
+    tree_links.new(new_nodes["Vector Rotate.003"].outputs[0], new_nodes["Vector Math.008"].inputs[0])
+    tree_links.new(new_nodes["Vector Math.008"].outputs[0], new_nodes["Set Position"].inputs[2])
+    tree_links.new(new_nodes["Group Input"].outputs[2], new_nodes["Math.003"].inputs[1])
+    tree_links.new(new_nodes["Vector Math.003"].outputs[1], new_nodes["Math.003"].inputs[0])
+    tree_links.new(new_nodes["Math.003"].outputs[0], new_nodes["Math.004"].inputs[0])
+    tree_links.new(new_nodes["Math.004"].outputs[0], new_nodes["Math.005"].inputs[0])
+    tree_links.new(new_nodes["Math.003"].outputs[0], new_nodes["Math.005"].inputs[1])
+    tree_links.new(new_nodes["Math.005"].outputs[0], new_nodes["Math"].inputs[0])
+    tree_links.new(new_nodes["Group Input"].outputs[3], new_nodes["Math.006"].inputs[1])
+    tree_links.new(new_nodes["Math.007"].outputs[0], new_nodes["Math.008"].inputs[1])
+    tree_links.new(new_nodes["Math.009"].outputs[0], new_nodes["Math.008"].inputs[0])
+    tree_links.new(new_nodes["Math.006"].outputs[0], new_nodes["Math.010"].inputs[1])
+    tree_links.new(new_nodes["Math.006"].outputs[0], new_nodes["Math.009"].inputs[0])
+    tree_links.new(new_nodes["Math.010"].outputs[0], new_nodes["Math.007"].inputs[0])
+    tree_links.new(new_nodes["Group Input"].outputs[3], new_nodes["Math.007"].inputs[1])
+    tree_links.new(new_nodes["Vector Math.002"].outputs[0], new_nodes["Vector Math.004"].inputs[0])
+    tree_links.new(new_nodes["Group Input"].outputs[4], new_nodes["Math.011"].inputs[1])
+    tree_links.new(new_nodes["Math.008"].outputs[0], new_nodes["Math.011"].inputs[0])
+    tree_links.new(new_nodes["Math.011"].outputs[0], new_nodes["Vector Math.004"].inputs[1])
+    tree_links.new(new_nodes["Math.001"].outputs[0], new_nodes["Math.006"].inputs[0])
+    tree_links.new(new_nodes["Math.001"].outputs[0], new_nodes["Math.009"].inputs[1])
+    tree_links.new(new_nodes["Group Input"].outputs[1], new_nodes["Math.002"].inputs[0])
 
     return new_node_group
 
@@ -905,13 +965,13 @@ def add_mega_mini_to_geo_node_group(existing_group_name, clear_node_tree, mega_m
 
     node = tree_nodes.new(type="NodeGroupInput")
     node.name = "Group Input"
-    node.location = (-260, 10)
+    node.location = (-260, 280)
     new_nodes["Group Input"] = node
 
     node = tree_nodes.new(type="ShaderNodeValue")
     node.name = "Value"
     node.label = "MegaMini FP Power"
-    node.location = (-260, -70)
+    node.location = (-260, 200)
     node.outputs[0].default_value = 0.5
     # add driver to get MegaMini FP Power
     drv_mm_fp_power = node.outputs[0].driver_add('default_value').driver
@@ -923,6 +983,54 @@ def add_mega_mini_to_geo_node_group(existing_group_name, clear_node_tree, mega_m
     drv_mm_fp_power.expression = v_mm_fp_power.name
     # finish
     new_nodes["Value"] = node
+
+    node = tree_nodes.new(type="ShaderNodeValue")
+    node.name = "Value.001"
+    node.label = "MegaMini FP Min Dist"
+    node.location = (-260, 110)
+    node.outputs[0].default_value = 0.0
+    # add driver to get MegaMini FP Min Dist
+    drv_mm_fp_min_dist = node.outputs[0].driver_add('default_value').driver
+    v_mm_fp_min_dist = drv_mm_fp_min_dist.variables.new()
+    v_mm_fp_min_dist.type = 'SINGLE_PROP'
+    v_mm_fp_min_dist.name                 = "var"
+    v_mm_fp_min_dist.targets[0].id        = mega_mini_rig
+    v_mm_fp_min_dist.targets[0].data_path = "[\""+OBJ_PROP_FP_MIN_DIST+"\"]"
+    drv_mm_fp_min_dist.expression = v_mm_fp_min_dist.name
+    # finish
+    new_nodes["Value.001"] = node
+
+    node = tree_nodes.new(type="ShaderNodeValue")
+    node.name = "Value.002"
+    node.label = "MegaMini FP Min Scale"
+    node.location = (-260, 20)
+    node.outputs[0].default_value = 0.0
+    # add driver to get MegaMini FP Min Dist
+    drv_mm_fp_min_scale = node.outputs[0].driver_add('default_value').driver
+    v_mm_fp_min_scale = drv_mm_fp_min_scale.variables.new()
+    v_mm_fp_min_scale.type = 'SINGLE_PROP'
+    v_mm_fp_min_scale.name                 = "var"
+    v_mm_fp_min_scale.targets[0].id        = mega_mini_rig
+    v_mm_fp_min_scale.targets[0].data_path = "[\""+OBJ_PROP_FP_MIN_SCALE+"\"]"
+    drv_mm_fp_min_scale.expression = v_mm_fp_min_scale.name
+    # finish
+    new_nodes["Value.002"] = node
+
+    node = tree_nodes.new(type="ShaderNodeValue")
+    node.name = "Value.003"
+    node.label = "Place Scale Mult"
+    node.location = (-260, -70)
+    node.outputs[0].default_value = 1.0
+    # add driver to get Place Scale Mult from MegaMini rig
+    drv_mm_place_scl_mult = node.outputs[0].driver_add('default_value').driver
+    v_mm_place_scl_mult = drv_mm_place_scl_mult.variables.new()
+    v_mm_place_scl_mult.type = 'SINGLE_PROP'
+    v_mm_place_scl_mult.name                 = "var"
+    v_mm_place_scl_mult.targets[0].id        = mega_mini_rig
+    v_mm_place_scl_mult.targets[0].data_path = "pose.bones[\""+mega_mini_rig_bone+"\"][\""+OBJ_PROP_BONE_SCL_MULT+"\"]"
+    drv_mm_place_scl_mult.expression = v_mm_place_scl_mult.name
+    # finish
+    new_nodes["Value.003"] = node
 
     node = tree_nodes.new(type="FunctionNodeInputVector")
     node.name = "Vector"
@@ -1331,46 +1439,29 @@ def add_mega_mini_to_geo_node_group(existing_group_name, clear_node_tree, mega_m
     new_nodes["Group Output"] = node
 
     # links between nodes
-    new_links = []
     tree_links = existing_node_group.links
-    link = tree_links.new(new_nodes["Group Input"].outputs[0], new_nodes["MegaMiniGeoNodeGroup"].inputs[0])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Value"].outputs[0], new_nodes["MegaMiniGeoNodeGroup"].inputs[1])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector"].outputs[0], new_nodes["MegaMiniGeoNodeGroup"].inputs[2])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector.001"].outputs[0], new_nodes["MegaMiniGeoNodeGroup"].inputs[3])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector.002"].outputs[0], new_nodes["MegaMiniGeoNodeGroup"].inputs[4])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector Math.001"].outputs[0], new_nodes["MegaMiniGeoNodeGroup"].inputs[5])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector Math.002"].outputs[0], new_nodes["MegaMiniGeoNodeGroup"].inputs[6])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector Math.003"].outputs[0], new_nodes["MegaMiniGeoNodeGroup"].inputs[7])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["MegaMiniGeoNodeGroup"].outputs[0], new_nodes["Group Output"].inputs[0])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector.003"].outputs[0], new_nodes["Vector Math"].inputs[0])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector.006"].outputs[0], new_nodes["Vector Math"].inputs[1])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector Math"].outputs[0], new_nodes["Vector Rotate"].inputs[0])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector.007"].outputs[0], new_nodes["Vector Rotate"].inputs[4])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector Rotate"].outputs[0], new_nodes["Vector Math.001"].inputs[0])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector.008"].outputs[0], new_nodes["Vector Math.001"].inputs[1])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector.004"].outputs[0], new_nodes["Vector Math.002"].inputs[0])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector.007"].outputs[0], new_nodes["Vector Math.002"].inputs[1])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector.005"].outputs[0], new_nodes["Vector Math.003"].inputs[0])
-    new_links.append(link)
-    link = tree_links.new(new_nodes["Vector.008"].outputs[0], new_nodes["Vector Math.003"].inputs[1])
-    new_links.append(link)
+    tree_links.new(new_nodes["Group Input"].outputs[0], new_nodes["MegaMiniGeoNodeGroup"].inputs[0])
+    tree_links.new(new_nodes["Value"].outputs[0], new_nodes["MegaMiniGeoNodeGroup"].inputs[1])
+    tree_links.new(new_nodes["Value.001"].outputs[0], new_nodes["MegaMiniGeoNodeGroup"].inputs[2])
+    tree_links.new(new_nodes["Value.002"].outputs[0], new_nodes["MegaMiniGeoNodeGroup"].inputs[3])
+    tree_links.new(new_nodes["Value.003"].outputs[0], new_nodes["MegaMiniGeoNodeGroup"].inputs[4])
+    tree_links.new(new_nodes["Vector"].outputs[0], new_nodes["MegaMiniGeoNodeGroup"].inputs[5])
+    tree_links.new(new_nodes["Vector.001"].outputs[0], new_nodes["MegaMiniGeoNodeGroup"].inputs[6])
+    tree_links.new(new_nodes["Vector.002"].outputs[0], new_nodes["MegaMiniGeoNodeGroup"].inputs[7])
+    tree_links.new(new_nodes["Vector Math.001"].outputs[0], new_nodes["MegaMiniGeoNodeGroup"].inputs[8])
+    tree_links.new(new_nodes["Vector Math.002"].outputs[0], new_nodes["MegaMiniGeoNodeGroup"].inputs[9])
+    tree_links.new(new_nodes["Vector Math.003"].outputs[0], new_nodes["MegaMiniGeoNodeGroup"].inputs[10])
+    tree_links.new(new_nodes["MegaMiniGeoNodeGroup"].outputs[0], new_nodes["Group Output"].inputs[0])
+    tree_links.new(new_nodes["Vector.003"].outputs[0], new_nodes["Vector Math"].inputs[0])
+    tree_links.new(new_nodes["Vector.006"].outputs[0], new_nodes["Vector Math"].inputs[1])
+    tree_links.new(new_nodes["Vector Math"].outputs[0], new_nodes["Vector Rotate"].inputs[0])
+    tree_links.new(new_nodes["Vector.007"].outputs[0], new_nodes["Vector Rotate"].inputs[4])
+    tree_links.new(new_nodes["Vector Rotate"].outputs[0], new_nodes["Vector Math.001"].inputs[0])
+    tree_links.new(new_nodes["Vector.008"].outputs[0], new_nodes["Vector Math.001"].inputs[1])
+    tree_links.new(new_nodes["Vector.004"].outputs[0], new_nodes["Vector Math.002"].inputs[0])
+    tree_links.new(new_nodes["Vector.007"].outputs[0], new_nodes["Vector Math.002"].inputs[1])
+    tree_links.new(new_nodes["Vector.005"].outputs[0], new_nodes["Vector Math.003"].inputs[0])
+    tree_links.new(new_nodes["Vector.008"].outputs[0], new_nodes["Vector Math.003"].inputs[1])
 
 def add_mega_mini_nodes_to_node_group(existing_group_name, override_create, clear_node_tree, mega_mini_rig,
                                       mega_mini_rig_bone, attached_obj):
@@ -1400,6 +1491,17 @@ def add_mega_mini_geo_nodes_to_object(ob, override_create, alt_group_name, mega_
     add_mega_mini_nodes_to_node_group(geo_nodes_mod.node_group.name, override_create, True, mega_mini_rig,
                                       mega_mini_rig_bone, ob)
 
+# if a MegaMini Rig is found in the parent-hierarchy of ob, then return the rig and the associated 'Place' bone,
+# otherwise return None
+def get_parent_mega_mini_rig(ob):
+    if ob.parent is None:
+        return None
+    if is_mega_mini_rig(ob.parent):
+        # return MegaMiniRig, MegaMiniRigPlaceBoneName 
+        return ob.parent, ob.parent_bone
+    # recursively search parent(s) for MegaMini Rig
+    return get_parent_mega_mini_rig(ob.parent)
+
 class MEGAMINI_AddGeoNodes(bpy.types.Operator):
     bl_description = "Add Geometry Nodes to selected object(s). Object(s) must already be attached to MegaMini Rig "+\
                      "for this to work"
@@ -1411,7 +1513,8 @@ class MEGAMINI_AddGeoNodes(bpy.types.Operator):
         scn = context.scene
         for ob in context.selected_objects:
             # skip objects that are not parented to a MegaMini Rig
-            if not is_mega_mini_rig(ob.parent) or ob.parent_bone == "":
+            mm_rig, mm_rig_bone = get_parent_mega_mini_rig(ob)
+            if mm_rig is None:
                 continue
             alt_group_name = None
             if scn.MegaMini_GeoNodesCreateUseAltGroup:
@@ -1419,6 +1522,6 @@ class MEGAMINI_AddGeoNodes(bpy.types.Operator):
                     self.report({'ERROR'}, "Unable to create geometry nodes because Alternate Group not found.")
                     return {'CANCELLED'}
                 alt_group_name = scn.MegaMini_GeoNodesCreateAltGroup.name
-            add_mega_mini_geo_nodes_to_object(ob, scn.MegaMini_GeoNodesOverrideCreate, alt_group_name, ob.parent,
-                                              ob.parent_bone)
+            add_mega_mini_geo_nodes_to_object(ob, scn.MegaMini_GeoNodesOverrideCreate, alt_group_name, mm_rig,
+                                              mm_rig_bone)
         return {'FINISHED'}

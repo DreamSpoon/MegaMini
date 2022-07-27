@@ -54,6 +54,8 @@ class MEGAMINI_PT_Observer(bpy.types.Panel):
         box.operator("mega_mini.create_mega_mini_rig")
         box.prop(scn, "MegaMini_NewObserverScale")
         box.prop(scn, "MegaMini_NewObserverFP_Power")
+        box.prop(scn, "MegaMini_NewObserverFP_MinDist")
+        box.prop(scn, "MegaMini_NewObserverFP_MinScale")
 
 class MEGAMINI_PT_Proxy(bpy.types.Panel):
     bl_label = "Proxy"
@@ -98,6 +100,8 @@ def unregister():
     del bts.MegaMini_GeoNodesCreateAltGroup
     del bts.MegaMini_GeoNodesCreateUseAltGroup
     del bts.MegaMini_GeoNodesOverrideCreate
+    del bts.MegaMini_NewObserverFP_MinScale
+    del bts.MegaMini_NewObserverFP_MinDist
     del bts.MegaMini_NewObserverFP_Power
     del bts.MegaMini_NewObserverScale
 
@@ -109,9 +113,16 @@ def register_props():
     bp = bpy.props
     bts.MegaMini_NewObserverScale = bp.FloatProperty(name="Observer Scale",
         description="Scaling factor to assign to MegaMini rig", default=1000.0, min=0.0)
-    bts.MegaMini_NewObserverFP_Power = bp.FloatProperty(name="Forced Perspective Power",
-        description="Forced perspective distance power value, for generating scales of objects attached to MegaMini " +
-        "rig. Value is usually between zero and one.", default=0.5)
+    bts.MegaMini_NewObserverFP_Power = bp.FloatProperty(name="FP Power",
+        description="Forced Perspective distance Power value, for generating scales of objects attached to MegaMini " +
+        "rig based on distance. Value is usually between zero and one. Setting this value to zero will remove the " +
+        "'forced perspective effect'", default=0.5)
+    bts.MegaMini_NewObserverFP_MinDist = bp.FloatProperty(name="FP Min Dist",
+        description="Forced Perspective Minimum Distance value, for generating scales of objects attached to MegaMini " +
+        "rig", default=0.0)
+    bts.MegaMini_NewObserverFP_MinScale = bp.FloatProperty(name="FP Min Scale",
+        description="Forced Perspective Minimum Scale value, which is the minimum scale to apply with the " +
+        "'Forced Perspective' effect", default=0.0)
     bts.MegaMini_GeoNodesOverrideCreate = bp.BoolProperty(name="Override Create", description="MegaMini Geometry " +
         "Nodes custom node group is re-created when geometry nodes are added to object(s), and any previous custom " +
         "group with the same name is deprecated", default=False)
