@@ -32,15 +32,16 @@ bl_info = {
 import bpy
 from bpy.props import PointerProperty
 
-from .panels import (MEGAMINI_CreateMegaMiniRig, MEGAMINI_CreateRigProxyPair, MEGAMINI_AttachRigProxyPair,
-                     MEGAMINI_AddGeoNodes)
+from .rig import MEGAMINI_CreateMegaMiniRig
+from .attach import (MEGAMINI_AttachCreatePlace, MEGAMINI_AttachSinglePlace, MEGAMINI_AttachMultiPlace)
+from .geo_nodes import MEGAMINI_AddGeoNodes
 
 if bpy.app.version < (2,80,0):
     Region = "TOOLS"
 else:
     Region = "UI"
 
-class MEGAMINI_PT_Observer(bpy.types.Panel):
+class MEGAMINI_PT_Rig(bpy.types.Panel):
     bl_label = "Rig"
     bl_space_type = "VIEW_3D"
     bl_region_type = Region
@@ -57,8 +58,8 @@ class MEGAMINI_PT_Observer(bpy.types.Panel):
         box.prop(scn, "MegaMini_NewObserverFP_MinDist")
         box.prop(scn, "MegaMini_NewObserverFP_MinScale")
 
-class MEGAMINI_PT_Proxy(bpy.types.Panel):
-    bl_label = "Proxy"
+class MEGAMINI_PT_Attach(bpy.types.Panel):
+    bl_label = "Attach"
     bl_space_type = "VIEW_3D"
     bl_region_type = Region
     bl_category = "MegaMini"
@@ -67,27 +68,46 @@ class MEGAMINI_PT_Proxy(bpy.types.Panel):
         scn = context.scene
         layout = self.layout
         box = layout.box()
-        box.label(text="Create Proxy")
-        box.operator("mega_mini.create_proxy_pair")
-        box.label(text="Attach to Rig")
-        box.operator("mega_mini.attach_proxy_pair")
-        # geometry node support is only for Blender v2.9+ (or maybe v3.0+ ... TODO: check this)
-        if bpy.app.version >= (2,90,0):
-            box.operator("mega_mini.add_geo_nodes")
-            box.prop(scn, "MegaMini_GeoNodesOverrideCreate")
-            box.prop(scn, "MegaMini_GeoNodesCreateUseAltGroup")
-            col = box.column()
-            col.active = scn.MegaMini_GeoNodesCreateUseAltGroup
-            col.prop(scn, "MegaMini_GeoNodesCreateAltGroup")
+        box.label(text="Attach")
+        box.operator("mega_mini.create_proxy_place")
+        box.operator("mega_mini.attach_single_place")
+        box.operator("mega_mini.attach_multi_place")
+        box.prop(scn, "MegaMini_AttachPreCreateRig")
+        box.prop(scn, "MegaMini_AttachNoReParent")
+
+class MEGAMINI_PT_GeoNodes(bpy.types.Panel):
+    bl_label = "Geometry Nodes"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = Region
+    bl_category = "MegaMini"
+
+    def draw(self, context):
+        scn = context.scene
+        layout = self.layout
+        box = layout.box()
+        box.operator("mega_mini.add_geo_nodes")
+        box.prop(scn, "MegaMini_GeoNodesOverrideCreate")
+        box.prop(scn, "MegaMini_GeoNodesCreateUseAltGroup")
+        col = box.column()
+        col.active = scn.MegaMini_GeoNodesCreateUseAltGroup
+        col.prop(scn, "MegaMini_GeoNodesCreateAltGroup")
 
 classes = [
-    MEGAMINI_PT_Observer,
-    MEGAMINI_PT_Proxy,
+    MEGAMINI_PT_Rig,
+    MEGAMINI_PT_Attach,
     MEGAMINI_CreateMegaMiniRig,
-    MEGAMINI_CreateRigProxyPair,
-    MEGAMINI_AttachRigProxyPair,
-    MEGAMINI_AddGeoNodes,
+    MEGAMINI_AttachCreatePlace,
+    MEGAMINI_AttachMultiPlace,
+    MEGAMINI_AttachSinglePlace,
 ]
+# geometry node support is only for Blender v2.9+ (or maybe v3.0+ ...
+# TODO: check what version is needed for current geometry nodes setup
+if bpy.app.version >= (2,90,0):
+    other_classes = [
+        MEGAMINI_PT_GeoNodes,
+        MEGAMINI_AddGeoNodes,
+    ]
+    classes.extend(other_classes)
 
 def register():
     for cls in classes:
@@ -100,6 +120,8 @@ def unregister():
     del bts.MegaMini_GeoNodesCreateAltGroup
     del bts.MegaMini_GeoNodesCreateUseAltGroup
     del bts.MegaMini_GeoNodesOverrideCreate
+    del bts.MegaMini_AttachNoReParent
+    del bts.MegaMini_AttachPreCreateRig
     del bts.MegaMini_NewObserverFP_MinScale
     del bts.MegaMini_NewObserverFP_MinDist
     del bts.MegaMini_NewObserverFP_Power
@@ -112,17 +134,27 @@ def register_props():
     bts = bpy.types.Scene
     bp = bpy.props
     bts.MegaMini_NewObserverScale = bp.FloatProperty(name="Observer Scale",
-        description="Scaling factor to assign to MegaMini rig", default=1000.0, min=0.0)
+        description="Scaling factor to convert actual location of Observer/Place to scaled location of Proxy " +
+        "Observer/Place. X, Y, and Z location values are divided by this value", default=1000.0, min=0.0)
     bts.MegaMini_NewObserverFP_Power = bp.FloatProperty(name="FP Power",
-        description="Forced Perspective distance Power value, for generating scales of objects attached to MegaMini " +
-        "rig based on distance. Value is usually between zero and one. Setting this value to zero will remove the " +
-        "'forced perspective effect'", default=0.5)
+        description="Forced Perspective distance Power value, which is applied to the distance between Observer " +
+        "and Place with math function power() for generating scales of places/objects attached to MegaMini rig. " +
+        "Value is usually between zero and one. Setting this value to zero will remove the 'forced perspective' " +
+        "effect", default=0.5)
     bts.MegaMini_NewObserverFP_MinDist = bp.FloatProperty(name="FP Min Dist",
-        description="Forced Perspective Minimum Distance value, for generating scales of objects attached to MegaMini " +
-        "rig", default=0.0)
+        description="Forced Perspective Minimum Distance value, which is the minimum distance from Observer before " +
+        "'forced perspective' effect begins", default=0.0)
     bts.MegaMini_NewObserverFP_MinScale = bp.FloatProperty(name="FP Min Scale",
         description="Forced Perspective Minimum Scale value, which is the minimum scale to apply with the " +
         "'Forced Perspective' effect", default=0.0)
+
+    bts.MegaMini_AttachPreCreateRig = bp.BoolProperty(name="Create Rig if Needed", description="Create a new " +
+        "MegaMini Rig before attaching objects, if no MegaMiniRig was active before pressing attach button",
+        default=True)
+    bts.MegaMini_AttachNoReParent = bp.BoolProperty(name="Do not Re-Parent", description="Objects that already " +
+        "have a parent object will not be 're-parented' to the MegaMini Rig. Only the 'root parents', and " +
+        "non-parented objects will be attached to MegeMini rig", default=True)
+
     bts.MegaMini_GeoNodesOverrideCreate = bp.BoolProperty(name="Override Create", description="MegaMini Geometry " +
         "Nodes custom node group is re-created when geometry nodes are added to object(s), and any previous custom " +
         "group with the same name is deprecated", default=False)
