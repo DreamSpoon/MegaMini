@@ -827,6 +827,9 @@ class MEGAMINI_AddGeoNodes(bpy.types.Operator):
     def execute(self, context):
         scn = context.scene
         for ob in context.selected_objects:
+            # skip non-mesh objects
+            if ob.type != 'MESH':
+                continue
             # skip objects that are not parented to a MegaMini Rig
             mm_rig, mm_rig_bone = get_parent_mega_mini_rig(ob)
             if mm_rig is None:

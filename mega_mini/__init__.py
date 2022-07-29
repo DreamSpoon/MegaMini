@@ -32,7 +32,8 @@ bl_info = {
 import bpy
 from bpy.props import PointerProperty
 
-from .rig import MEGAMINI_CreateMegaMiniRig
+from .rig import (OBJ_PROP_SCALE, OBJ_PROP_FP_POWER, OBJ_PROP_FP_MIN_DIST, OBJ_PROP_FP_MIN_SCALE, OBJ_PROP_BONE_SCL_MULT)
+from .rig import (MEGAMINI_CreateMegaMiniRig, is_mega_mini_rig)
 from .attach import (MEGAMINI_AttachCreatePlace, MEGAMINI_AttachSinglePlace, MEGAMINI_AttachMultiPlace)
 from .geo_nodes import MEGAMINI_AddGeoNodes
 
@@ -53,6 +54,7 @@ class MEGAMINI_PT_Rig(bpy.types.Panel):
         box = layout.box()
         box.label(text="Create Rig")
         box.operator("mega_mini.create_mega_mini_rig")
+        box.label(text="New Rig Properties:")
         box.prop(scn, "MegaMini_NewObserverScale")
         box.prop(scn, "MegaMini_NewObserverFP_Power")
         box.prop(scn, "MegaMini_NewObserverFP_MinDist")
@@ -92,6 +94,26 @@ class MEGAMINI_PT_GeoNodes(bpy.types.Panel):
         col.active = scn.MegaMini_GeoNodesCreateUseAltGroup
         col.prop(scn, "MegaMini_GeoNodesCreateAltGroup")
 
+class MEGAMINI_PT_ActiveRig(bpy.types.Panel):
+    bl_label = "Active Rig"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = Region
+    bl_category = "MegaMini"
+
+    def draw(self, context):
+        active_ob = context.active_object
+        # display panel only if active object is a MegaMini Rig
+        if not is_mega_mini_rig(active_ob):
+            return
+        #scn = context.scene
+        layout = self.layout
+        box = layout.box()
+        # https://blender.stackexchange.com/questions/148924/add-custom-property-to-panel
+        box.prop(active_ob, '["'+OBJ_PROP_SCALE+'"]')
+        box.prop(active_ob, '["'+OBJ_PROP_FP_POWER+'"]')
+        box.prop(active_ob, '["'+OBJ_PROP_FP_MIN_DIST+'"]')
+        box.prop(active_ob, '["'+OBJ_PROP_FP_MIN_SCALE+'"]')
+
 classes = [
     MEGAMINI_PT_Rig,
     MEGAMINI_PT_Attach,
@@ -103,11 +125,13 @@ classes = [
 # geometry node support is only for Blender v2.9+ (or maybe v3.0+ ...
 # TODO: check what version is needed for current geometry nodes setup
 if bpy.app.version >= (2,90,0):
-    other_classes = [
+    classes.extend([
         MEGAMINI_PT_GeoNodes,
         MEGAMINI_AddGeoNodes,
-    ]
-    classes.extend(other_classes)
+    ])
+classes.extend([
+    MEGAMINI_PT_ActiveRig,
+])
 
 def register():
     for cls in classes:

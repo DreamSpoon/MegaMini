@@ -261,6 +261,21 @@ def create_mega_mini_armature(context, mega_mini_scale, mega_mini_fp_power, mega
     mega_mini_rig[OBJ_PROP_FP_POWER] = mega_mini_fp_power
     mega_mini_rig[OBJ_PROP_FP_MIN_DIST] = mega_mini_fp_min_dist
     mega_mini_rig[OBJ_PROP_FP_MIN_SCALE] = mega_mini_fp_min_scale
+    # set min values for the MegaMini custom props
+    # https://developer.blender.org/D9697
+    ui_data = mega_mini_rig.id_properties_ui(OBJ_PROP_SCALE)
+    ui_data.update(min=0.0)
+    ui_data.update(description="Proxy Scale Factor")
+    ui_data = mega_mini_rig.id_properties_ui(OBJ_PROP_FP_POWER)
+    ui_data.update(min=0.0)
+    ui_data.update(description="Forced Perspective Distance Power")
+    ui_data = mega_mini_rig.id_properties_ui(OBJ_PROP_FP_MIN_DIST)
+    ui_data.update(min=0.0)
+    ui_data.update(description="Forced Perspective Minimum Distance")
+    ui_data = mega_mini_rig.id_properties_ui(OBJ_PROP_FP_MIN_SCALE)
+    ui_data.update(min=0.0)
+    ui_data.update(description="Forced Perspective Minimum Scale")
+
     # ensure mega_mini_rig will display custom bone shapes
     mega_mini_rig.data.show_bone_custom_shapes = True
     # modify default bone to make ProxyField bone, to hold proxies for observer(s) and actual place(s)
@@ -335,7 +350,7 @@ def create_mega_mini_armature(context, mega_mini_scale, mega_mini_fp_power, mega
 
 class MEGAMINI_CreateMegaMiniRig(bpy.types.Operator):
     bl_description = "Create a MegaMini rig, for 'condensed space' - e.g. Solar system simulations, " + \
-        "outer-space-to-Earth-surface zoom"
+        "outer-space-to-Earth-surface zoom. Rig will be created with New Rig Properties"
     bl_idname = "mega_mini.create_mega_mini_rig"
     bl_label = "Create MegaMini Rig"
     bl_options = {'REGISTER', 'UNDO'}

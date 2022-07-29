@@ -476,6 +476,9 @@ class MEGAMINI_AttachMultiPlace(bpy.types.Operator):
         bpy.ops.object.select_all(action='DESELECT')
         active_ob.select_set(True)
         for ob in selected_obs:
+            # skip the MegaMini Rig for this part (it's already been selected)
+            if ob is active_ob:
+                continue
             # do not select objects that have a parent, if 'no re-parent' option is enabled
             if ob.parent != None and context.scene.MegaMini_AttachNoReParent:
                 continue
