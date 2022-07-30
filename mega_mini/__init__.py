@@ -122,7 +122,7 @@ classes = [
     MEGAMINI_AttachMultiPlace,
     MEGAMINI_AttachSinglePlace,
 ]
-# geometry node support is only for Blender v2.9+ (or maybe v3.0+ ...
+# geometry node support is only for Blender v2.9+ (or maybe v3.0+ ...)
 # TODO: check what version is needed for current geometry nodes setup
 if bpy.app.version >= (2,90,0):
     classes.extend([

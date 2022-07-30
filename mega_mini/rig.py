@@ -17,14 +17,14 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import bpy
-import mathutils
-
 import math
+import mathutils
+from rna_prop_ui import rna_idprop_ui_prop_get
 
 if bpy.app.version < (2,80,0):
-    from .imp_v27 import create_mesh_obj_from_pydata
+    from .imp_v27 import (create_mesh_obj_from_pydata, get_cursor_location)
 else:
-    from .imp_v28 import create_mesh_obj_from_pydata
+    from .imp_v28 import (create_mesh_obj_from_pydata, get_cursor_location)
 
 RIG_BASENAME = "MegaMini"
 PROXY_FIELD_BNAME = "ProxyField"
@@ -262,19 +262,44 @@ def create_mega_mini_armature(context, mega_mini_scale, mega_mini_fp_power, mega
     mega_mini_rig[OBJ_PROP_FP_MIN_DIST] = mega_mini_fp_min_dist
     mega_mini_rig[OBJ_PROP_FP_MIN_SCALE] = mega_mini_fp_min_scale
     # set min values for the MegaMini custom props
-    # https://developer.blender.org/D9697
-    ui_data = mega_mini_rig.id_properties_ui(OBJ_PROP_SCALE)
-    ui_data.update(min=0.0)
-    ui_data.update(description="Proxy Scale Factor")
-    ui_data = mega_mini_rig.id_properties_ui(OBJ_PROP_FP_POWER)
-    ui_data.update(min=0.0)
-    ui_data.update(description="Forced Perspective Distance Power")
-    ui_data = mega_mini_rig.id_properties_ui(OBJ_PROP_FP_MIN_DIST)
-    ui_data.update(min=0.0)
-    ui_data.update(description="Forced Perspective Minimum Distance")
-    ui_data = mega_mini_rig.id_properties_ui(OBJ_PROP_FP_MIN_SCALE)
-    ui_data.update(min=0.0)
-    ui_data.update(description="Forced Perspective Minimum Scale")
+    if bpy.app.version < (2,80,0):
+        ui = rna_idprop_ui_prop_get(mega_mini_rig, OBJ_PROP_SCALE)
+        ui['description'] = "Proxy Scale Factor"
+        ui['default'] = 1000.0
+        ui['min'] = ui['soft_min'] = 0.0
+        ui['max'] = ui['soft_max'] = 2e38
+        ui = rna_idprop_ui_prop_get(mega_mini_rig, OBJ_PROP_FP_POWER)
+        ui['description'] = "Forced Perspective Distance Power"
+        ui['default'] = 0.5
+        ui['min'] = ui['soft_min'] = -2e38
+        ui['max'] = ui['soft_max'] = 2e38
+        ui = rna_idprop_ui_prop_get(mega_mini_rig, OBJ_PROP_FP_MIN_DIST)
+        ui['description'] = "Forced Perspective Minimum Distance"
+        ui['default'] = 0.0
+        ui['min'] = ui['soft_min'] = 0.0
+        ui['max'] = ui['soft_max'] = 2e38
+        ui = rna_idprop_ui_prop_get(mega_mini_rig, OBJ_PROP_FP_MIN_SCALE)
+        ui['description'] = "Forced Perspective Minimum Scale"
+        ui['default'] = 0.0
+        ui['min'] = ui['soft_min'] = 0.0
+        ui['max'] = ui['soft_max'] = 2e38
+    else:
+        # https://developer.blender.org/D9697
+        ui_data = mega_mini_rig.id_properties_ui(OBJ_PROP_SCALE)
+        ui_data.update(description="Proxy Scale Factor")
+        ui_data.update(default=1000.0)
+        ui_data.update(min=0.0)
+        ui_data = mega_mini_rig.id_properties_ui(OBJ_PROP_FP_POWER)
+        ui_data.update(description="Forced Perspective Distance Power")
+        ui_data.update(default=0.5)
+        ui_data = mega_mini_rig.id_properties_ui(OBJ_PROP_FP_MIN_DIST)
+        ui_data.update(description="Forced Perspective Minimum Distance")
+        ui_data.update(default=0.0)
+        ui_data.update(min=0.0)
+        ui_data = mega_mini_rig.id_properties_ui(OBJ_PROP_FP_MIN_SCALE)
+        ui_data.update(description="Forced Perspective Minimum Scale")
+        ui_data.update(default=0.0)
+        ui_data.update(min=0.0)
 
     # ensure mega_mini_rig will display custom bone shapes
     mega_mini_rig.data.show_bone_custom_shapes = True
@@ -341,10 +366,7 @@ def create_mega_mini_armature(context, mega_mini_scale, mega_mini_fp_power, mega
     mega_mini_rig.data.layers = RIG_BONEVIS_LAYERS
 
     # move mega-mini rig to cursor location
-    if bpy.app.version < (2,80,0):
-        mega_mini_rig.location = context.scene.cursor_location
-    else:
-        mega_mini_rig.location = context.scene.cursor.location
+    mega_mini_rig.location = get_cursor_location(context)
 
     return mega_mini_rig
 

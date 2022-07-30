@@ -29,6 +29,11 @@ from .rig import (TRI_WIDGET_NAME, TRI_PINCH_WIDGET_NAME, QUAD_WIDGET_NAME, PINC
 from .rig import (OBJ_PROP_BONE_SCL_MULT, OBJ_PROP_SCALE, OBJ_PROP_FP_POWER, OBJ_PROP_FP_MIN_DIST,
     OBJ_PROP_FP_MIN_SCALE, MEGA_MINI_CUSTOM_NODE_GROUP_NAME, create_mega_mini_armature, is_mega_mini_rig)
 
+if bpy.app.version < (2,80,0):
+    from .imp_v27 import (select_object, get_cursor_location)
+else:
+    from .imp_v28 import (select_object, get_cursor_location)
+
 # "edit bones" must be created at origin (head at origin, ...), so that pose bone locations can be used by drivers
 # to perform offsets, distance calculations, etc.
 def create_proxy_bone_pair(context, mega_mini_rig, widget_objs, use_obs_loc, place_loc=None):
@@ -422,12 +427,12 @@ class MEGAMINI_AttachSinglePlace(bpy.types.Operator):
         # select only the objects that were selected before the function was called, and the
         # MegaMini Rig (which may have been 'pre-created')
         bpy.ops.object.select_all(action='DESELECT')
-        active_ob.select_set(True)
+        select_object(active_ob, True)
         for ob in selected_obs:
             # do not select objects that have a parent, if 'no re-parent' option is enabled
             if ob.parent != None and context.scene.MegaMini_AttachNoReParent:
                 continue
-            ob.select_set(True)
+            select_object(ob, True)
 
         # make the new Place bone the active bone, to be used for parenting objects
         active_ob.data.bones.active = active_ob.data.bones[place_bname]
@@ -474,17 +479,17 @@ class MEGAMINI_AttachMultiPlace(bpy.types.Operator):
         # select only the objects that were selected before the function was called, and the
         # MegaMini Rig (which may have been 'pre-created')
         bpy.ops.object.select_all(action='DESELECT')
-        active_ob.select_set(True)
+        select_object(active_ob, True)
         for ob in selected_obs:
             # skip the MegaMini Rig for this part (it's already been selected)
-            if ob is active_ob:
+            if ob == active_ob:
                 continue
             # do not select objects that have a parent, if 'no re-parent' option is enabled
             if ob.parent != None and context.scene.MegaMini_AttachNoReParent:
                 continue
-            ob.select_set(True)
+            select_object(ob, True)
 
-            place_loc = ob.matrix_world.translation - context.scene.cursor.location
+            place_loc = ob.matrix_world.translation - get_cursor_location(context)
             # expand the rig by creating new bones in the rig
             place_bname, proxy_place_bname = create_proxy_bone_pair(context, active_ob, widget_objs, True, place_loc)
 

@@ -19,6 +19,15 @@
 import bpy
 import bmesh
 
+def get_cursor_location(context):
+    # error check
+    if context is None or context.scene is None:
+        return None
+    return context.scene.cursor_location
+
+def select_object(ob, s):
+    ob.select = s == True
+
 def create_mesh_obj_from_pydata(verts=[], faces=[], edges=[], obj_name=None, mesh_name=None):
     if obj_name is None:
         obj_name = "Object"
